@@ -118,9 +118,22 @@ jobs:
           # Wait for PostgreSQL to be ready
           sleep 10
           
-          # Install server dependencies and run migrations
+          # Install server dependencies and create .env
           cd /var/www/oauth2.api/server
           npm ci --production
+          
+          # Create .env file with production settings
+          cat > .env << EOF
+          NODE_ENV=production
+          PORT=9003
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=oauth2_db
+          DB_USER=oauth2_user
+          DB_PASSWORD=oauth2_pass
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          EOF
+          
           npm run migrate
           
           # Install client dependencies and start
@@ -129,7 +142,7 @@ jobs:
           
           # Start both services with PM2
           cd /var/www/oauth2.api/server
-          PORT=9003 pm2 start server.js --name oauth2-server
+          pm2 start server.js --name oauth2-server
           
           cd /var/www/oauth2.console/client
           pm2 start "npm start" --name oauth2-client
