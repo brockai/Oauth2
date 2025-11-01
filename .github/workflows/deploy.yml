@@ -44,9 +44,16 @@ jobs:
         npm run build
         mkdir -p ../dist/client
         cp -r .next ../dist/client/
-        cp -r public ../dist/client/
         cp package*.json ../dist/client/
         cp next.config.js ../dist/client/
+        # Copy other necessary files
+        cp -r styles ../dist/client/
+        cp -r pages ../dist/client/
+        cp -r components ../dist/client/
+        cp -r hooks ../dist/client/
+        cp -r lib ../dist/client/
+        cp postcss.config.js ../dist/client/
+        cp tailwind.config.js ../dist/client/
 
     # Deploy to server
     - name: Deploy both services to server
