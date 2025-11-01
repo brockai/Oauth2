@@ -1,0 +1,111 @@
+name: Deploy OAuth2 Services
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    # Build Server
+    - name: Install server dependencies
+      run: npm ci
+
+    - name: Build server artifacts
+      run: |
+        mkdir -p dist/server
+        cp -r controllers dist/server/
+        cp -r middleware dist/server/
+        cp -r routes dist/server/
+        cp -r database dist/server/
+        cp -r config dist/server/
+        cp server.js dist/server/
+        cp package*.json dist/server/
+
+    # Build Client
+    - name: Install client dependencies
+      run: |
+        cd client
+        npm ci
+
+    - name: Build client
+      run: |
+        cd client
+        npm run build
+        mkdir -p ../dist/client
+        cp -r .next ../dist/client/
+        cp -r public ../dist/client/
+        cp package*.json ../dist/client/
+        cp next.config.js ../dist/client/
+
+    # Deploy to server
+    - name: Deploy both services to server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Stop existing services
+          pm2 stop oauth2-server || true
+          pm2 stop oauth2-client || true
+          
+          # Prepare server directory
+          mkdir -p /var/www/oauth2.api/server
+          rm -rf /var/www/oauth2.api/server/*
+          
+          # Prepare client directory  
+          mkdir -p /var/www/oauth2.console/client
+          rm -rf /var/www/oauth2.console/client/*
+
+    - name: Copy server files
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "dist/server/*"
+        target: "/var/www/oauth2.api/server"
+        strip_components: 2
+
+    - name: Copy client files
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "dist/client/*"
+        target: "/var/www/oauth2.console/client"
+        strip_components: 2
+
+    - name: Install dependencies and start services with PM2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Install server dependencies and start
+          cd /var/www/oauth2.api/server
+          npm ci --production
+          
+          # Install client dependencies and start
+          cd /var/www/oauth2.console/client
+          npm ci --production
+          
+          # Start both services with PM2
+          cd /var/www/oauth2.api/server
+          pm2 start server.js --name oauth2-server
+          
+          cd /var/www/oauth2.console/client
+          pm2 start "npm start" --name oauth2-client
