@@ -113,11 +113,15 @@ jobs:
         script: |
           # Start PostgreSQL container
           cd /var/www/oauth2-postgres
-          docker-compose up -d postgres
+          docker compose up -d postgres
           
-          # Install server dependencies and start
+          # Wait for PostgreSQL to be ready
+          sleep 10
+          
+          # Install server dependencies and run migrations
           cd /var/www/oauth2.api/server
           npm ci --production
+          npm run migrate
           
           # Install client dependencies and start
           cd /var/www/oauth2.console/client
