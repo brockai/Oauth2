@@ -95,13 +95,26 @@ jobs:
         target: "/var/www/oauth2.console/client"
         strip_components: 2
 
-    - name: Install dependencies and start services with PM2
+    - name: Copy docker-compose file
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "docker-compose.yml"
+        target: "/var/www/oauth2-postgres/"
+
+    - name: Install dependencies and start services
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          # Start PostgreSQL container
+          cd /var/www/oauth2-postgres
+          docker-compose up -d postgres
+          
           # Install server dependencies and start
           cd /var/www/oauth2.api/server
           npm ci --production
