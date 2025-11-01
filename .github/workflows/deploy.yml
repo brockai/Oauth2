@@ -129,7 +129,7 @@ jobs:
           
           # Start both services with PM2
           cd /var/www/oauth2.api/server
-          pm2 start server.js --name oauth2-server
+          PORT=9003 pm2 start server.js --name oauth2-server
           
           cd /var/www/oauth2.console/client
           pm2 start "npm start" --name oauth2-client
