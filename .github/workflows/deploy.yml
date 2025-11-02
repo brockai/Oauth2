@@ -41,6 +41,8 @@ jobs:
     - name: Build client
       run: |
         cd client
+        # Replace localhost API docs URL with production URL
+        sed -i 's|http://localhost:3000/api-docs|https://oauth2.api.fuelbadger.brockai.com/api-docs/|g' pages/login.js
         npm run build
         mkdir -p ../dist/client
         cp -r .next ../dist/client/
