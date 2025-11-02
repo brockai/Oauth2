@@ -29,6 +29,7 @@ jobs:
         cp -r routes dist/server/
         cp -r database dist/server/
         cp -r config dist/server/
+        cp -r scripts dist/server/
         cp server.js dist/server/
         cp package*.json dist/server/
 
