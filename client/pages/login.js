@@ -18,6 +18,9 @@ export default function Login() {
     setLoading(true);
     setError('');
     console.log('Login form: handleSubmit called with credentials:', credentials);
+    
+    // Add debugger to pause execution here
+    debugger;
 
     try {
       console.log('Login form: calling login function');
@@ -36,6 +39,7 @@ export default function Login() {
       }
     } catch (error) {
       console.log('Login form: login error:', error);
+      debugger; // Add debugger here too to examine the error
       setError(error.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
