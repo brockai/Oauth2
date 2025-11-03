@@ -9,37 +9,27 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    console.log('useAuth: checking token:', token ? 'exists' : 'missing');
     if (token) {
-      console.log('useAuth: calling getMe API');
       authAPI.getMe()
         .then(response => {
-          console.log('useAuth: getMe success:', response.data);
           setUser(response.data);
         })
-        .catch((error) => {
-          console.log('useAuth: getMe failed:', error.response?.status, error.message);
+        .catch(() => {
           localStorage.removeItem('token');
         })
         .finally(() => {
-          console.log('useAuth: setting loading to false');
           setLoading(false);
         });
     } else {
-      console.log('useAuth: no token, setting loading to false');
       setLoading(false);
     }
   }, []);
 
   const login = async (credentials) => {
-    console.log('useAuth: login called with credentials');
     const response = await authAPI.login(credentials);
-    console.log('useAuth: login API response:', response.data);
     const { token, user } = response.data;
 
-    console.log('useAuth: storing token in localStorage:', token ? 'exists' : 'missing');
     localStorage.setItem('token', token);
-    console.log('useAuth: token stored, setting user:', user);
     setUser(user);
 
     return response.data;

@@ -11,35 +11,22 @@ export default function Login() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
-  console.log('Login page: component loaded, debugging active');
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    console.log('Login form: handleSubmit called with credentials:', credentials);
-    
-    // Add debugger to pause execution here
-    debugger;
 
     try {
-      console.log('Login form: calling login function');
       const result = await login(credentials);
-      console.log('Login form: login result:', result);
       const { user } = result;
-      console.log('Login form: user from result:', user);
       
       // Redirect tenant users to clients page, admins to dashboard
       if (user.user_type === 'tenant') {
-        console.log('Login form: redirecting tenant to /clients');
         router.push('/clients');
       } else {
-        console.log('Login form: redirecting admin to /');
         router.push('/');
       }
     } catch (error) {
-      console.log('Login form: login error:', error);
-      debugger; // Add debugger here too to examine the error
       setError(error.response?.data?.error || 'Login failed');
     } finally {
       setLoading(false);
