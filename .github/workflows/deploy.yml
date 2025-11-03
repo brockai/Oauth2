@@ -147,9 +147,9 @@ jobs:
           cd /var/www/oauth2.console/client
           npm ci --production
           
-          # Start both services with PM2
+          # Start or restart both services with PM2
           cd /var/www/oauth2.api/server
-          pm2 start server.js --name oauth2-server
+          pm2 restart oauth2-server || pm2 start server.js --name oauth2-server
           
           cd /var/www/oauth2.console/client
-          pm2 start "npm start" --name oauth2-client
+          pm2 restart oauth2-client || pm2 start "npm start" --name oauth2-client
