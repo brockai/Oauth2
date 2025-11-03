@@ -80,7 +80,7 @@ async function createAdminUser(username, password) {
         }
         process.exit(1);
     } finally {
-        await db.end();
+        await db.pool.end();
     }
 }
 
