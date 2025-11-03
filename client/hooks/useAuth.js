@@ -9,18 +9,24 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    console.log('useAuth: checking token:', token ? 'exists' : 'missing');
     if (token) {
+      console.log('useAuth: calling getMe API');
       authAPI.getMe()
         .then(response => {
+          console.log('useAuth: getMe success:', response.data);
           setUser(response.data);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log('useAuth: getMe failed:', error.response?.status, error.message);
           localStorage.removeItem('token');
         })
         .finally(() => {
+          console.log('useAuth: setting loading to false');
           setLoading(false);
         });
     } else {
+      console.log('useAuth: no token, setting loading to false');
       setLoading(false);
     }
   }, []);

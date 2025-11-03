@@ -20,12 +20,15 @@ export default function Dashboard() {
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    } else if (!loading && user && isTenantUser()) {
-      // Redirect tenant users to tenants page to see their tenant
-      router.push('/tenants');
-    }
+    // Temporarily disabled auth redirect for debugging
+    console.log('Dashboard auth check:', { loading, user, isTenantUser: user ? isTenantUser() : 'N/A' });
+    
+    // if (!loading && !user) {
+    //   router.push('/login');
+    // } else if (!loading && user && isTenantUser()) {
+    //   // Redirect tenant users to tenants page to see their tenant
+    //   router.push('/tenants');
+    // }
   }, [user, loading, router, isTenantUser]);
 
   useEffect(() => {
