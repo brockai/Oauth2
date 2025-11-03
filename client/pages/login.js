@@ -11,6 +11,8 @@ export default function Login() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
+  console.log('Login page: component loaded, debugging active');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
