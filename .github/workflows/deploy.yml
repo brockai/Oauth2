@@ -134,6 +134,7 @@ jobs:
           DB_NAME=oauth2_db
           DB_USER=oauth2_user
           DB_PASSWORD=oauth2_pass
+          DATABASE_URL=postgresql://oauth2_user:oauth2_pass@localhost:5432/oauth2_db
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOF
           
