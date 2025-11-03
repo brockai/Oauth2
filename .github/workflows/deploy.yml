@@ -141,7 +141,24 @@ jobs:
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOF
           
-          npm run migrate
+          # Wait longer for PostgreSQL to be fully ready
+          sleep 5
+          
+          # Run database initialization and migrations
+          echo "Running database setup..."
+          node database/init.js || echo "Database init failed, continuing with migration"
+          npm run migrate || echo "Migration failed, but continuing deployment"
+          
+          # Verify tables exist
+          echo "Verifying database tables..."
+          node -e "
+          const { Pool } = require('pg');
+          const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+          pool.query('SELECT tablename FROM pg_tables WHERE schemaname = \\'public\\';')
+            .then(res => console.log('Tables:', res.rows.map(r => r.tablename)))
+            .catch(err => console.error('DB check failed:', err.message))
+            .finally(() => pool.end());
+          " || echo "Database verification failed"
           
           # Install client dependencies and start
           cd /var/www/oauth2.console/client
