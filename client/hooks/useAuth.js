@@ -32,10 +32,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
+    console.log('useAuth: login called with credentials');
     const response = await authAPI.login(credentials);
+    console.log('useAuth: login API response:', response.data);
     const { token, user } = response.data;
 
+    console.log('useAuth: storing token in localStorage:', token ? 'exists' : 'missing');
     localStorage.setItem('token', token);
+    console.log('useAuth: token stored, setting user:', user);
     setUser(user);
 
     return response.data;
