@@ -28,6 +28,7 @@ jobs:
         cp -r middleware dist/server/
         cp -r routes dist/server/
         cp -r database dist/server/
+        cp -r migrations dist/server/
         cp -r config dist/server/
         cp -r scripts dist/server/
         cp server.js dist/server/
