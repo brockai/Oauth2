@@ -59,6 +59,7 @@ jobs:
         cp -r components ../dist/client/
         cp -r hooks ../dist/client/
         cp -r lib ../dist/client/
+        cp -r public ../dist/client/
         cp postcss.config.js ../dist/client/
         cp tailwind.config.js ../dist/client/
 
