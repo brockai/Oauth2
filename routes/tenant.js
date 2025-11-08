@@ -124,7 +124,7 @@ router.post('/login', async (req, res) => {
         // Search for user across all tenants associated with this client
         const tenantIds = tenantResult.rows.map(t => t.id);
         const userResult = await db.query(
-            'SELECT id, username, email, password_hash, first_name, last_name, is_active, is_admin, tenant_id FROM tenant_users WHERE tenant_id = ANY($1) AND email = $2 AND is_active = true',
+            'SELECT id, username, email, password_hash, first_name, last_name, is_active, is_admin, email_verified, tenant_id FROM tenant_users WHERE tenant_id = ANY($1) AND email = $2 AND is_active = true',
             [tenantIds, email]
         );
 
