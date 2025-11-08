@@ -32,11 +32,11 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://oauth2.console.fuelbadger.brockai.com']
+    ? ['https://oauth2.console.fuelbadger.brockai.com', 'https://web.fuelbadger.brockai.com']
     : ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-CSRF-Token']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-CSRF-Token']
 }));
 
 // Rate limiting
