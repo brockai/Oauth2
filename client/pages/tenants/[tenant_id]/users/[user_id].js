@@ -69,6 +69,15 @@ export default function TenantUserDetail() {
     }
   };
 
+  const toggleEmailVerified = async () => {
+    try {
+      await tenantUsersAPI.updateTenantUser(tenant_id, user_id, { email_verified: !user.email_verified });
+      setUser({ ...user, email_verified: !user.email_verified });
+    } catch (error) {
+      alert('Error updating email verification status: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     if (!newPassword) {
@@ -261,8 +270,20 @@ export default function TenantUserDetail() {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Email Verified</dt>
-                <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                  {user.email_verified ? 'Yes' : 'No'}
+                <dd className="mt-1 flex items-center space-x-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    user.email_verified
+                      ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                      : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                  }`}>
+                    {user.email_verified ? 'Yes' : 'No'}
+                  </span>
+                  <button
+                    onClick={toggleEmailVerified}
+                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    {user.email_verified ? 'Mark Unverified' : 'Mark Verified'}
+                  </button>
                 </dd>
               </div>
               <div>
