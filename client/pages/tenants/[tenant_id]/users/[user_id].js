@@ -3,7 +3,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Layout from '../../../../components/Layout';
-import { tenantUsersAPI, tenantsAPI, clientsAPI } from '../../../../lib/api';
+import { tenantUsersAPI, tenantsAPI } from '../../../../lib/api';
 
 export default function TenantUserDetail() {
   const { user: currentUser, loading } = useAuth();
@@ -15,9 +15,6 @@ export default function TenantUserDetail() {
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
-  const [tenantClients, setTenantClients] = useState([]);
-  const [availableClientRoles, setAvailableClientRoles] = useState([]);
-  const [userClientRoles, setUserClientRoles] = useState(user?.client_roles || []);
 
   useEffect(() => {
     if (!loading && !currentUser) {
@@ -29,7 +26,6 @@ export default function TenantUserDetail() {
     if (currentUser && tenant_id && user_id) {
       loadTenant();
       loadUser();
-      loadTenantClients();
     }
   }, [currentUser, tenant_id, user_id]);
 
@@ -46,7 +42,6 @@ export default function TenantUserDetail() {
     try {
       const response = await tenantUsersAPI.getTenantUser(tenant_id, user_id);
       setUser(response.data);
-      setUserClientRoles(response.data.client_roles || []);
     } catch (error) {
       setError('User not found');
       console.error('Error loading user:', error);
@@ -55,37 +50,6 @@ export default function TenantUserDetail() {
     }
   };
 
-  const loadTenantClients = async () => {
-    try {
-      const response = await clientsAPI.getClients(tenant_id);
-      setTenantClients(response.data);
-
-      // Extract all unique roles from tenant's clients
-      const allRoles = [];
-      response.data.forEach(client => {
-        if (client.roles && client.roles.length > 0) {
-          client.roles.forEach(role => {
-            const roleObj = {
-              id: typeof role === 'string' ? role : (role.id || role.name),
-              name: typeof role === 'string' ? role : role.name,
-              description: typeof role === 'string' ? `${role} role` : role.description,
-              clientId: client.id,
-              clientName: client.name
-            };
-
-            // Only add if not already exists
-            if (!allRoles.find(r => r.id === roleObj.id && r.clientId === roleObj.clientId)) {
-              allRoles.push(roleObj);
-            }
-          });
-        }
-      });
-
-      setAvailableClientRoles(allRoles);
-    } catch (error) {
-      console.error('Error loading tenant clients:', error);
-    }
-  };
 
   const toggleUserStatus = async () => {
     try {
@@ -322,92 +286,6 @@ export default function TenantUserDetail() {
             </dl>
           </div>
 
-          {/* Client Roles */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Client Roles</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Client-side roles derived from applications associated with this tenant. These roles are used for client-side authorization.
-            </p>
-
-            {availableClientRoles.length > 0 ? (
-              <div className="space-y-4">
-                {/* Group roles by client */}
-                {tenantClients.map(client => {
-                  const clientRoles = availableClientRoles.filter(role => role.clientId === client.id);
-                  if (clientRoles.length === 0) return null;
-
-                  return (
-                    <div key={client.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                      <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                        <span className="text-blue-600 dark:text-blue-400">{client.name}</span>
-                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({clientRoles.length} roles)</span>
-                      </h4>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {clientRoles.map(role => {
-                          const roleKey = `${client.id}:${role.id}`;
-                          const isAssigned = userClientRoles.includes(roleKey);
-
-                          return (
-                            <label key={roleKey} className="relative flex items-start cursor-pointer">
-                              <div className="flex items-center h-5">
-                                <input
-                                  type="checkbox"
-                                  checked={isAssigned}
-                                  onChange={(e) => handleClientRoleChange(roleKey, e.target.checked)}
-                                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
-                                />
-                              </div>
-                              <div className="ml-3 text-sm">
-                                <div className="font-medium text-gray-700 dark:text-gray-300">{role.name}</div>
-                                {role.description && (
-                                  <div className="text-gray-500 dark:text-gray-400">{role.description}</div>
-                                )}
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Summary of assigned roles */}
-                {userClientRoles.length > 0 && (
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-md">
-                    <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                      Assigned Client Roles ({userClientRoles.length})
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {userClientRoles.map(roleKey => {
-                        const [clientId, roleId] = roleKey.split(':');
-                        const client = tenantClients.find(c => c.id === clientId);
-                        const role = availableClientRoles.find(r => r.clientId === clientId && r.id === roleId);
-
-                        return (
-                          <span key={roleKey} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-                            {client?.name}: {role?.name || roleId}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  No client roles available
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  Client roles are derived from applications associated with this tenant.
-                  <Link href={`/tenants/${tenant_id}`} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 ml-1">
-                    Manage tenant applications
-                  </Link>
-                </p>
-              </div>
-            )}
-          </div>
 
           {/* Password Reset */}
           {showPasswordReset && (
