@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const db = require('../database/connection');
-
 class TenantUsersController {
     // Get all users for a tenant
     async getTenantUsers(req, res) {
