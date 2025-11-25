@@ -85,13 +85,25 @@ A complete OAuth 2.0 authorization server with multi-client support, tenant mana
    ```
    
    Edit `.env` with your database connection and secrets:
+   
+   **For Development (uses remote database):**
    ```
-   DATABASE_URL=postgresql://username:password@localhost:5432/oauth2_db
+   DATABASE_URL=postgresql://oauth2_user:oauth2_pass@oauth2.api.fuelbadger.brockai.com:5432/oauth2_db
    JWT_SECRET=your-super-secret-jwt-key-here
-   ADMIN_USERNAME=admin
-   ADMIN_PASSWORD=admin123
    PORT=3000
    NODE_ENV=development
+   
+   # API Keys for external access
+   API_KEY=your-api-key-here
+   ADMIN_TOKEN=your-admin-token-here
+   ```
+   
+   **For Production (create `.env.production`):**
+   ```
+   DATABASE_URL=postgresql://oauth2_user:oauth2_pass@oauth2.api.fuelbadger.brockai.com:5432/oauth2_db
+   JWT_SECRET=your-super-secret-jwt-key-here
+   PORT=3000
+   NODE_ENV=production
    
    # API Keys for external access
    API_KEY=your-api-key-here
@@ -107,7 +119,7 @@ A complete OAuth 2.0 authorization server with multi-client support, tenant mana
 
 ### Start the servers
 
-**Development mode:**
+**Development mode (connects to remote database):**
 ```bash
 # Terminal 1 - Start OAuth server
 npm run dev
@@ -118,8 +130,8 @@ npm run client
 
 **Production mode:**
 ```bash
-# Build and start OAuth server
-npm start
+# Use production environment file
+NODE_ENV=production npm start
 
 # Build and start Next.js client
 cd client && npm run build && npm start
@@ -361,7 +373,7 @@ The application uses the following PostgreSQL tables:
 
 ### **Database Security**
 - **Use connection pooling** with proper limits
-- **Enable database SSL** connections in production
+- **SSL connections** are enabled for remote database connections in production
 - **Regular database backups** with encryption
 - **Monitor database performance** and query logs
 

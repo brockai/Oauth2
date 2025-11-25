@@ -1,101 +1,28 @@
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+const bcrypt = require('bcryptjs');
+const db = require('../database/connection');
 
 const getApiKeys = async (req, res) => {
   try {
-    const keys = [];
+    const result = await db.query(
+      'SELECT id, name, key_preview, type, is_active, created_at, updated_at, last_used_at FROM api_keys ORDER BY created_at DESC'
+    );
     
-    // Check if API_KEY exists
-    if (process.env.API_KEY) {
-      keys.push({
-        id: 'env_api_key',
-        name: 'Environment API Key',
-        key_preview: `${process.env.API_KEY.substring(0, 8)}...${process.env.API_KEY.substring(process.env.API_KEY.length - 4)}`,
-        type: 'api_key',
-        is_active: true,
-        created_at: 'Set via environment variable',
-        source: 'environment'
-      });
-    }
-    
-    // Check if ADMIN_TOKEN exists
-    if (process.env.ADMIN_TOKEN) {
-      keys.push({
-        id: 'env_admin_token',
-        name: 'Environment Admin Token',
-        key_preview: `${process.env.ADMIN_TOKEN.substring(0, 8)}...${process.env.ADMIN_TOKEN.substring(process.env.ADMIN_TOKEN.length - 4)}`,
-        type: 'admin_token',
-        is_active: true,
-        created_at: 'Set via environment variable',
-        source: 'environment'
-      });
-    }
-    
-    res.json(keys);
+    res.json(result.rows);
   } catch (error) {
     console.error('Error fetching API keys:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-const updateEnvFile = (envVar, newValue) => {
-  try {
-    const envPath = path.join(__dirname, '..', '.env');
-    let envContent = '';
-    
-    // Read existing .env file if it exists
-    if (fs.existsSync(envPath)) {
-      envContent = fs.readFileSync(envPath, 'utf8');
-    }
-    
-    // Parse existing environment variables
-    const envLines = envContent.split('\n');
-    let found = false;
-    
-    // Update existing variable or add comment if not found
-    for (let i = 0; i < envLines.length; i++) {
-      const line = envLines[i].trim();
-      if (line.startsWith(`${envVar}=`) || line.startsWith(`#${envVar}=`)) {
-        envLines[i] = `${envVar}=${newValue}`;
-        found = true;
-        break;
-      }
-    }
-    
-    // If variable not found, add it
-    if (!found) {
-      // Add after the API Keys comment or at the end
-      const apiKeysCommentIndex = envLines.findIndex(line => 
-        line.includes('# API Keys for external access')
-      );
-      
-      if (apiKeysCommentIndex !== -1) {
-        envLines.splice(apiKeysCommentIndex + 1, 0, `${envVar}=${newValue}`);
-      } else {
-        // Add API Keys section if it doesn't exist
-        envLines.push('');
-        envLines.push('# API Keys for external access');
-        envLines.push(`${envVar}=${newValue}`);
-      }
-    }
-    
-    // Write back to file
-    fs.writeFileSync(envPath, envLines.join('\n'));
-    
-    // Update process.env for immediate effect
-    process.env[envVar] = newValue;
-    
-    return true;
-  } catch (error) {
-    console.error('Error updating .env file:', error);
-    return false;
-  }
-};
 
 const generateNewKey = async (req, res) => {
   try {
-    const { type = 'api_key' } = req.body;
+    const { name, type = 'api_key' } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
 
     if (!['api_key', 'admin_token'].includes(type)) {
       return res.status(400).json({ error: 'Invalid type. Must be api_key or admin_token' });
@@ -103,21 +30,23 @@ const generateNewKey = async (req, res) => {
 
     // Generate a new key
     const newKey = crypto.randomBytes(32).toString('hex');
-    const envVar = type === 'api_key' ? 'API_KEY' : 'ADMIN_TOKEN';
+    const keyPreview = `${newKey.substring(0, 8)}...${newKey.substring(newKey.length - 4)}`;
     
-    // Update the .env file
-    const updated = updateEnvFile(envVar, newKey);
+    // Hash the key for storage
+    const saltRounds = 10;
+    const keyHash = await bcrypt.hash(newKey, saltRounds);
     
-    if (!updated) {
-      return res.status(500).json({ error: 'Failed to update environment file' });
-    }
+    // Store in database
+    const result = await db.query(
+      'INSERT INTO api_keys (name, key_hash, key_preview, type) VALUES ($1, $2, $3, $4) RETURNING id, name, key_preview, type, is_active, created_at',
+      [name, keyHash, keyPreview, type]
+    );
     
-    res.status(200).json({
-      message: `New ${type.replace('_', ' ')} generated and saved to environment`,
+    res.status(201).json({
+      message: `New ${type.replace('_', ' ')} generated successfully`,
       key: newKey,
-      type: type,
-      envVar: envVar,
-      status: 'Environment variable updated successfully'
+      api_key: result.rows[0],
+      warning: 'Store this key securely - it will not be shown again'
     });
   } catch (error) {
     console.error('Error generating new key:', error);
@@ -125,26 +54,30 @@ const generateNewKey = async (req, res) => {
   }
 };
 
-const validateApiKey = (keyToValidate) => {
+const validateApiKey = async (keyToValidate) => {
   try {
-    // Check against API_KEY
-    if (process.env.API_KEY && keyToValidate === process.env.API_KEY) {
-      return {
-        id: 'env_api_key',
-        name: 'Environment API Key',
-        type: 'api_key',
-        is_active: true
-      };
-    }
+    // Get all active API keys from database
+    const result = await db.query(
+      'SELECT id, name, key_hash, type, is_active FROM api_keys WHERE is_active = true'
+    );
     
-    // Check against ADMIN_TOKEN
-    if (process.env.ADMIN_TOKEN && keyToValidate === process.env.ADMIN_TOKEN) {
-      return {
-        id: 'env_admin_token',
-        name: 'Environment Admin Token',
-        type: 'admin_token',
-        is_active: true
-      };
+    // Check each key
+    for (const apiKey of result.rows) {
+      const isValid = await bcrypt.compare(keyToValidate, apiKey.key_hash);
+      if (isValid) {
+        // Update last_used_at timestamp
+        await db.query(
+          'UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [apiKey.id]
+        );
+        
+        return {
+          id: apiKey.id,
+          name: apiKey.name,
+          type: apiKey.type,
+          is_active: apiKey.is_active
+        };
+      }
     }
     
     return null;
@@ -154,24 +87,45 @@ const validateApiKey = (keyToValidate) => {
   }
 };
 
-const getApiKeyValue = async (req, res) => {
+const deleteApiKey = async (req, res) => {
   try {
     const { id } = req.params;
     
-    let keyValue = null;
-    if (id === 'env_api_key' && process.env.API_KEY) {
-      keyValue = process.env.API_KEY;
-    } else if (id === 'env_admin_token' && process.env.ADMIN_TOKEN) {
-      keyValue = process.env.ADMIN_TOKEN;
+    const result = await db.query(
+      'DELETE FROM api_keys WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'API key not found' });
     }
     
-    if (keyValue) {
-      res.json({ key: keyValue });
-    } else {
-      res.status(404).json({ error: 'API key not found' });
-    }
+    res.json({ message: 'API key deleted successfully' });
   } catch (error) {
-    console.error('Error retrieving API key value:', error);
+    console.error('Error deleting API key:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const toggleApiKey = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await db.query(
+      'UPDATE api_keys SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'API key not found' });
+    }
+    
+    res.json({
+      message: `API key ${result.rows[0].is_active ? 'activated' : 'deactivated'} successfully`,
+      api_key: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error toggling API key:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -179,6 +133,7 @@ const getApiKeyValue = async (req, res) => {
 module.exports = {
   getApiKeys,
   generateNewKey,
-  getApiKeyValue,
+  deleteApiKey,
+  toggleApiKey,
   validateApiKey
 };

@@ -113,12 +113,26 @@ const requireTenantOrSystemAdmin = (req, res, next) => {
     next();
 };
 
-const verifyApiKey = (req, res, next) => {
+const verifyApiKey = async (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
-    if (!apiKey || apiKey !== process.env.API_KEY) {
-      return res.status(401).json({ error: 'Invalid API key' });
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API key required' });
     }
-    next();
+
+    try {
+      const { validateApiKey } = require('../controllers/apiKeys');
+      const validatedKey = await validateApiKey(apiKey);
+      
+      if (!validatedKey) {
+        return res.status(401).json({ error: 'Invalid API key' });
+      }
+
+      req.apiKey = validatedKey;
+      next();
+    } catch (error) {
+      console.error('API key validation error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   };
 
 module.exports = {

@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: false  // Disable SSL for local Docker PostgreSQL container
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 pool.on('error', (err) => {

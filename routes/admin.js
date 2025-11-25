@@ -1422,8 +1422,9 @@ router.get('/api-keys', authenticateToken, requireAdmin, apiKeysController.getAp
  *       404:
  *         description: API key not found
  */
-router.get('/api-keys/:id/value', authenticateToken, requireAdmin, apiKeysController.getApiKeyValue);
 router.post('/api-keys/generate', authenticateToken, requireAdmin, apiKeysController.generateNewKey);
+router.delete('/api-keys/:id', authenticateToken, requireAdmin, apiKeysController.deleteApiKey);
+router.patch('/api-keys/:id/toggle', authenticateToken, requireAdmin, apiKeysController.toggleApiKey);
 
 // API Logs management (requires admin)
 /**
