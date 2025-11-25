@@ -149,7 +149,8 @@ jobs:
           # Run database initialization and migrations
           echo "Running database setup..."
           node database/init.js || echo "Database init failed, continuing with migration"
-          npm run migrate || echo "Migration failed, but continuing deployment"
+          npm run migrate || echo "Main migration failed, but continuing deployment"
+          node migrations/add_tenants.js || echo "Tenants migration failed, but continuing deployment"
           
           # Verify tables exist
           echo "Verifying database tables..."
