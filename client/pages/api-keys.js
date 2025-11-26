@@ -54,15 +54,29 @@ export default function ApiKeys() {
     }
   };
 
-  const copyApiKey = async (keyId) => {
+  const deleteApiKey = async (keyId) => {
+    if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+      return;
+    }
+    
     try {
-      const response = await apiKeysAPI.getApiKeyValue(keyId);
-      await navigator.clipboard.writeText(response.data.key);
-      // Optional: Show a toast notification
-      alert('API key copied to clipboard!');
+      await apiKeysAPI.deleteApiKey(keyId);
+      alert('API key deleted successfully!');
+      loadApiKeys(); // Refresh the list
     } catch (error) {
-      console.error('Error copying API key:', error);
-      alert('Error copying API key');
+      console.error('Error deleting API key:', error);
+      alert('Error deleting API key');
+    }
+  };
+
+  const toggleApiKey = async (keyId) => {
+    try {
+      await apiKeysAPI.toggleApiKey(keyId);
+      alert('API key status updated successfully!');
+      loadApiKeys(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating API key status:', error);
+      alert('Error updating API key status');
     }
   };
 
@@ -190,9 +204,23 @@ export default function ApiKeys() {
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-8">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-              Generate New API Key
+              {newKeyData.type === 'admin_token' ? 'Generate New Admin Token' : 'Generate New API Key'}
             </h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-1">
+              <div>
+                <label htmlFor="keyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {newKeyData.type === 'admin_token' ? 'Token Name' : 'Key Name'}
+                </label>
+                <input
+                  type="text"
+                  id="keyName"
+                  value={newKeyData.name}
+                  onChange={(e) => setNewKeyData({ ...newKeyData, name: e.target.value })}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  placeholder={newKeyData.type === 'admin_token' ? 'Enter a name for this admin token' : 'Enter a name for this API key'}
+                  required
+                />
+              </div>
               <div>
                 <label htmlFor="keyType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Key Type
@@ -214,11 +242,11 @@ export default function ApiKeys() {
                 disabled={generatingKey}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {generatingKey ? 'Generating...' : 'Generate New Key'}
+                {generatingKey ? 'Generating...' : (newKeyData.type === 'admin_token' ? 'Generate Admin Token' : 'Generate New Key')}
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Generated keys will be automatically saved to your server's .env file.
+              Generated keys will be securely stored in the database. Make sure to copy the key immediately as it won't be shown again.
             </p>
           </div>
         </div>
@@ -337,25 +365,27 @@ export default function ApiKeys() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           <div className="flex space-x-2">
+                            <span className="text-gray-400 dark:text-gray-600 text-xs">
+                              Keys cannot be copied after creation
+                            </span>
                             <button
-                              onClick={() => copyApiKey(key.id)}
-                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                              title="Copy full API key"
+                              onClick={() => toggleApiKey(key.id)}
+                              className={`${
+                                key.is_active 
+                                  ? 'text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300'
+                                  : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300'
+                              }`}
+                              title={key.is_active ? 'Deactivate key' : 'Activate key'}
                             >
-                              Copy
+                              {key.is_active ? 'Deactivate' : 'Activate'}
                             </button>
-                            {key.source === 'environment' ? (
-                              <span className="text-gray-400 dark:text-gray-600">Environment Variable</span>
-                            ) : (
-                              key.is_active && (
-                                <button
-                                  onClick={() => revokeKey(key.id)}
-                                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                >
-                                  Revoke
-                                </button>
-                              )
-                            )}
+                            <button
+                              onClick={() => deleteApiKey(key.id)}
+                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                              title="Delete API key permanently"
+                            >
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>

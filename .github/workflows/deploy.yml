@@ -146,9 +146,8 @@ jobs:
           # Wait longer for PostgreSQL to be fully ready
           sleep 5
           
-          # Run database initialization and migrations
-          echo "Running database setup..."
-          node database/init.js || echo "Database init failed, continuing with migration"
+          # Run database migrations
+          echo "Running database migrations..."
           npm run migrate || echo "Migration failed, but continuing deployment"
           
           # Verify tables exist

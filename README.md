@@ -28,11 +28,11 @@ A complete OAuth 2.0 authorization server with multi-client support, tenant mana
 - **Tenant statistics and analytics**
 
 ### **API Key Management System**
-- **Environment-based API key storage**
-- **Two key types**: API Keys and Admin Tokens
-- **Automatic key generation** with secure storage
+- **Database-driven API key storage** with secure hashing
+- **Dynamic key generation** and management
 - **Key validation and authentication**
 - **Copy-to-clipboard functionality**
+- **Usage tracking and monitoring**
 
 ### **Comprehensive Logging System**
 - **Real-time API request/response logging**
@@ -88,26 +88,18 @@ A complete OAuth 2.0 authorization server with multi-client support, tenant mana
    
    **For Development (uses remote database):**
    ```
-   DATABASE_URL=postgresql://oauth2_user:oauth2_pass@oauth2.api.fuelbadger.brockai.com:5432/oauth2_db
+   DATABASE_URL=remote database uri and port
    JWT_SECRET=your-super-secret-jwt-key-here
    PORT=3000
    NODE_ENV=development
-   
-   # API Keys for external access
-   API_KEY=your-api-key-here
-   ADMIN_TOKEN=your-admin-token-here
    ```
    
    **For Production (create `.env.production`):**
    ```
-   DATABASE_URL=postgresql://oauth2_user:oauth2_pass@oauth2.api.fuelbadger.brockai.com:5432/oauth2_db
+   DATABASE_URL=remote database uri and port
    JWT_SECRET=your-super-secret-jwt-key-here
    PORT=3000
    NODE_ENV=production
-   
-   # API Keys for external access
-   API_KEY=your-api-key-here
-   ADMIN_TOKEN=your-admin-token-here
    ```
 
 4. **Run database migrations:**
@@ -152,7 +144,7 @@ The admin interface provides several management sections:
 - **Applications** - OAuth client management 
 - **Tenants** - Multi-tenant organization management
 - **Users** - Per-tenant user management
-- **API Keys** - Generate Bearer tokens for Swagger testing + manage environment API keys
+- **API Keys** - Generate Bearer tokens for Swagger testing and manage database-stored API keys
 - **Logs** - Comprehensive API request/response logging
 - **Profile** - Update admin username and password
 
@@ -251,7 +243,7 @@ Used for admin endpoints like `/admin/clients`, `/admin/tenants`, `/admin/logs`,
 Used for endpoints like `POST /admin/token` that require the `x-api-key` header.
 
 **To use API Key endpoints:**
-1. Get the API key from **http://localhost:3001/api-keys** (bottom section)
+1. Generate an API key from **http://localhost:3001/api-keys**
 2. In Swagger, add `x-api-key` header manually when testing these endpoints
 
 ### **Token Types Explained**
@@ -261,8 +253,8 @@ Used for endpoints like `POST /admin/token` that require the `x-api-key` header.
   - Format: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
   - Use in: Swagger's "Authorize" dialog
 
-- **🔑 Environment API Keys**: Static keys for specific operations  
-  - Stored in `.env` file as `API_KEY` and `ADMIN_TOKEN`
+- **🔑 Database API Keys**: Dynamic keys for specific operations  
+  - Generated and stored securely in the database
   - Format: Long alphanumeric strings
   - Use in: `x-api-key` header
 
@@ -314,9 +306,10 @@ Used for endpoints like `POST /admin/token` that require the `x-api-key` header.
 
 ### API Key Management
 
-- `GET /admin/api-keys` - List API keys (shows environment-based keys)
-- `GET /admin/api-keys/:id/value` - Get full API key value
-- `POST /admin/api-keys/generate` - Generate new API key (writes to .env)
+- `GET /admin/api-keys` - List API keys
+- `POST /admin/api-keys/generate` - Generate new API key
+- `DELETE /admin/api-keys/:id` - Delete API key
+- `PATCH /admin/api-keys/:id/toggle` - Toggle API key active status
 
 ### Logging & Monitoring
 
@@ -351,9 +344,10 @@ The application uses the following PostgreSQL tables:
   - Success/failure status and error messages
 
 ### **API Key Management**
-- API keys are stored as environment variables (not in database)
-- `API_KEY` and `ADMIN_TOKEN` in `.env` file
-- Managed through admin interface with automatic .env updates
+- `api_keys` - Database-stored API keys with secure hashing
+  - Key names, types, creation/usage timestamps
+  - Secure bcrypt hashing for key validation
+  - Active status tracking and management
 
 ## 🔒 Security Considerations
 
@@ -448,7 +442,7 @@ npm run lint         # Run linting (if available)
 - Check that the token hasn't expired (tokens are session-based)
 
 **API Key Issues:**
-- For endpoints requiring `x-api-key` header, use the environment API keys from the bottom section of API Keys page
+- For endpoints requiring `x-api-key` header, generate an API key from the API Keys page
 - These are different from Bearer tokens and are used for specific operations
 
 ## Contributing

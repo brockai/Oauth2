@@ -211,8 +211,9 @@ export const tenantUsersAPI = {
 
 export const apiKeysAPI = {
   getApiKeys: () => api.get('/admin/api-keys'),
-  getApiKeyValue: (id) => api.get(`/admin/api-keys/${id}/value`),
   generateNewKey: (data) => api.post('/admin/api-keys/generate', data),
+  deleteApiKey: (id) => api.delete(`/admin/api-keys/${id}`),
+  toggleApiKey: (id) => api.patch(`/admin/api-keys/${id}/toggle`),
 };
 
 export const logsAPI = {
