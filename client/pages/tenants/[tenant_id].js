@@ -62,7 +62,7 @@ export default function TenantDetail() {
   };
 
   const deleteUser = async (userId, username) => {
-    if (window.confirm(`Are you sure you want to delete user "${username}"?`)) {
+    if (window.confirm(`Are you sure you want to delete user "${username}"? This action is irreversible. Would you like to continue?`)) {
       try {
         await tenantUsersAPI.deleteTenantUser(tenant_id, userId);
         setUsers(users.filter(u => u.id !== userId));
@@ -100,7 +100,7 @@ export default function TenantDetail() {
   };
 
   const deleteTenant = async () => {
-    if (window.confirm(`Are you sure you want to delete "${tenant.name}"? This will remove all associated applications.`)) {
+    if (window.confirm(`Are you sure you want to delete "${tenant.name}"? This will permanently delete the tenant as well as all users associated with this tenant. Do you want to continue?`)) {
       try {
         await tenantsAPI.deleteTenant(tenant_id);
         router.push('/tenants');

@@ -179,6 +179,88 @@ class TenantsController {
                 return res.status(404).json({ error: 'Tenant not found' });
             }
 
+            // Delete tenant and associated users from Meilisearch
+            try {
+                // Delete tenant from fbTenant index
+                const searchTenantResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        index: 'fbTenant',
+                        query: {
+                            q: '',
+                            filter: '',
+                            limit: 20
+                        },
+                        tenantId: id,
+                        attributesToRetrieve: ['id']
+                    })
+                });
+
+                if (searchTenantResponse.ok) {
+                    const tenantData = await searchTenantResponse.json();
+                    if (tenantData.hits && tenantData.hits.length > 0) {
+                        const tenantDocumentId = tenantData.hits[0].id;
+                        
+                        // Delete the tenant document
+                        await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                id: tenantDocumentId,
+                                index: 'fbTenant',
+                                tenantId: id
+                            })
+                        });
+                    }
+                }
+
+                // Delete all users associated with this tenant from fbUser index
+                const searchUsersResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        index: 'fbUser',
+                        query: {
+                            q: '',
+                            filter: '',
+                            limit: 1000
+                        },
+                        tenantId: id,
+                        attributesToRetrieve: ['id']
+                    })
+                });
+
+                if (searchUsersResponse.ok) {
+                    const usersData = await searchUsersResponse.json();
+                    if (usersData.hits && usersData.hits.length > 0) {
+                        // Delete each user document
+                        for (const user of usersData.hits) {
+                            await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    id: user.id,
+                                    index: 'fbUser',
+                                    tenantId: id
+                                })
+                            });
+                        }
+                    }
+                }
+            } catch (meilisearchError) {
+                console.error('Meilisearch cleanup error:', meilisearchError);
+                // Don't fail the deletion if Meilisearch cleanup fails
+            }
+
             res.status(204).send();
         } catch (error) {
             console.error('Delete tenant error:', error);

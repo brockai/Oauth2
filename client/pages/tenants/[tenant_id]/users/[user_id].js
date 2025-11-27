@@ -96,7 +96,7 @@ export default function TenantUserDetail() {
   };
 
   const deleteUser = async () => {
-    if (window.confirm(`Are you sure you want to delete user "${user.username}"?`)) {
+    if (window.confirm(`Are you sure you want to delete user "${user.username}"? This action is irreversible. Would you like to continue?`)) {
       try {
         await tenantUsersAPI.deleteTenantUser(tenant_id, user_id);
         router.push(`/tenants/${tenant_id}`);

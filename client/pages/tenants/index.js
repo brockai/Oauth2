@@ -43,7 +43,7 @@ export default function Tenants() {
   };
 
   const handleDelete = async (tenantId, tenantName) => {
-    if (window.confirm(`Are you sure you want to delete "${tenantName}"?`)) {
+    if (window.confirm(`Are you sure you want to delete "${tenantName}"? This will permanently delete the tenant as well as all users associated with this tenant. Do you want to continue?`)) {
       try {
         await tenantsAPI.deleteTenant(tenantId);
         setTenants(tenants.filter(t => t.id !== tenantId));

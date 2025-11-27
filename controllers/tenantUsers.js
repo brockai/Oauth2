@@ -320,6 +320,50 @@ class TenantUsersController {
                 return res.status(404).json({ error: 'User not found' });
             }
 
+            // Delete user from Meilisearch
+            try {
+                // Search for the user document in fbUser index
+                const searchResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        index: 'fbUser',
+                        query: {
+                            q: '',
+                            filter: `userId = ${user_id}`,
+                            limit: 20
+                        },
+                        tenantId: tenant_id,
+                        attributesToRetrieve: ['id']
+                    })
+                });
+
+                if (searchResponse.ok) {
+                    const userData = await searchResponse.json();
+                    if (userData.hits && userData.hits.length > 0) {
+                        const userDocumentId = userData.hits[0].id;
+                        
+                        // Delete the user document
+                        await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                id: userDocumentId,
+                                index: 'fbUser',
+                                tenantId: tenant_id
+                            })
+                        });
+                    }
+                }
+            } catch (meilisearchError) {
+                console.error('Meilisearch user cleanup error:', meilisearchError);
+                // Don't fail the deletion if Meilisearch cleanup fails
+            }
+
             res.status(204).send();
         } catch (error) {
             console.error('Delete tenant user error:', error);

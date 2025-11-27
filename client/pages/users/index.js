@@ -122,7 +122,7 @@ export default function UsersIndex() {
   };
 
   const deleteUser = async (tenantId, userId, username) => {
-    if (window.confirm(`Are you sure you want to delete user "${username}"?`)) {
+    if (window.confirm(`Are you sure you want to delete user "${username}"? This action is irreversible. Would you like to continue?`)) {
       try {
         await tenantUsersAPI.deleteTenantUser(tenantId, userId);
         setUsers(users.filter(u => u.id !== userId));
@@ -133,7 +133,7 @@ export default function UsersIndex() {
   };
 
   const deleteSystemAdmin = async (adminId, username) => {
-    if (window.confirm(`Are you sure you want to delete system admin "${username}"?`)) {
+    if (window.confirm(`Are you sure you want to delete system admin "${username}"? This action is irreversible. Would you like to continue?`)) {
       try {
         await adminAPI.deleteSuperAdmin(adminId);
         setSuperAdmins(superAdmins.filter(a => a.id !== adminId));
