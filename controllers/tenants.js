@@ -181,11 +181,27 @@ class TenantsController {
 
             // Delete tenant and associated users from Meilisearch
             try {
+                // Get bearer token for Meilisearch API
+                const tokenResponse = await fetch('http://localhost:3000/admin/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': req.headers['x-api-key'] || ''
+                    }
+                });
+
+                let bearerToken = '';
+                if (tokenResponse.ok) {
+                    const tokenData = await tokenResponse.json();
+                    bearerToken = tokenData.token;
+                }
+
                 // Delete tenant from fbTenant index
                 const searchTenantResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${bearerToken}`
                     },
                     body: JSON.stringify({
                         index: 'fbTenant',
@@ -209,6 +225,7 @@ class TenantsController {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${bearerToken}`
                             },
                             body: JSON.stringify({
                                 id: tenantDocumentId,
@@ -224,6 +241,7 @@ class TenantsController {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${bearerToken}`
                     },
                     body: JSON.stringify({
                         index: 'fbUser',
@@ -246,6 +264,7 @@ class TenantsController {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${bearerToken}`
                                 },
                                 body: JSON.stringify({
                                     id: user.id,

@@ -322,11 +322,27 @@ class TenantUsersController {
 
             // Delete user from Meilisearch
             try {
+                // Get bearer token for Meilisearch API
+                const tokenResponse = await fetch('http://localhost:3000/admin/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': req.headers['x-api-key'] || ''
+                    }
+                });
+
+                let bearerToken = '';
+                if (tokenResponse.ok) {
+                    const tokenData = await tokenResponse.json();
+                    bearerToken = tokenData.token;
+                }
+
                 // Search for the user document in fbUser index
                 const searchResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${bearerToken}`
                     },
                     body: JSON.stringify({
                         index: 'fbUser',
@@ -350,6 +366,7 @@ class TenantUsersController {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${bearerToken}`
                             },
                             body: JSON.stringify({
                                 id: userDocumentId,
