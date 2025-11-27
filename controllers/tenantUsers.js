@@ -311,6 +311,18 @@ class TenantUsersController {
         try {
             const { tenant_id, user_id } = req.params;
 
+            // Get the OAuth tenant_id before deletion
+            const tenantResult = await db.query(
+                'SELECT tenant_id FROM tenants WHERE id = $1',
+                [tenant_id]
+            );
+
+            if (tenantResult.rows.length === 0) {
+                return res.status(404).json({ error: 'Tenant not found' });
+            }
+
+            const oauthTenantId = tenantResult.rows[0].tenant_id;
+
             const result = await db.query(
                 'DELETE FROM tenant_users WHERE id = $1 AND tenant_id = $2 RETURNING id',
                 [user_id, tenant_id]
@@ -351,7 +363,7 @@ class TenantUsersController {
                             filter: `userId = ${user_id}`,
                             limit: 20
                         },
-                        tenantId: tenant_id,
+                        tenantId: oauthTenantId,
                         attributesToRetrieve: ['id']
                     })
                 });
@@ -371,7 +383,7 @@ class TenantUsersController {
                             body: JSON.stringify({
                                 id: userDocumentId,
                                 index: 'fbUser',
-                                tenantId: tenant_id
+                                tenantId: oauthTenantId
                             })
                         });
                     }

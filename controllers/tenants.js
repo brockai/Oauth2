@@ -173,11 +173,14 @@ class TenantsController {
                 });
             }
 
-            const result = await db.query('DELETE FROM tenants WHERE id = $1 RETURNING id', [id]);
+            const result = await db.query('DELETE FROM tenants WHERE id = $1 RETURNING id, tenant_id', [id]);
 
             if (result.rows.length === 0) {
                 return res.status(404).json({ error: 'Tenant not found' });
             }
+
+            const deletedTenant = result.rows[0];
+            const oauthTenantId = deletedTenant.tenant_id;
 
             // Delete tenant and associated users from Meilisearch
             try {
@@ -210,7 +213,7 @@ class TenantsController {
                             filter: '',
                             limit: 20
                         },
-                        tenantId: id,
+                        tenantId: oauthTenantId,
                         attributesToRetrieve: ['id']
                     })
                 });
@@ -230,7 +233,7 @@ class TenantsController {
                             body: JSON.stringify({
                                 id: tenantDocumentId,
                                 index: 'fbTenant',
-                                tenantId: id
+                                tenantId: oauthTenantId
                             })
                         });
                     }
@@ -250,7 +253,7 @@ class TenantsController {
                             filter: '',
                             limit: 1000
                         },
-                        tenantId: id,
+                        tenantId: oauthTenantId,
                         attributesToRetrieve: ['id']
                     })
                 });
