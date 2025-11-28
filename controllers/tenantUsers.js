@@ -334,59 +334,64 @@ class TenantUsersController {
 
             // Delete user from Meilisearch
             try {
-                // Get bearer token for Meilisearch API
-                const tokenResponse = await fetch('http://localhost:3000/admin/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': req.headers['x-api-key'] || ''
-                    }
-                });
+                // Only attempt Meilisearch cleanup if API key is provided
+                const apiKey = req.headers['x-api-key'];
+                if (apiKey) {
+                    // Get bearer token for Meilisearch API
+                    const tokenResponse = await fetch('http://localhost:3000/admin/token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': apiKey
+                        }
+                    });
 
-                let bearerToken = '';
-                if (tokenResponse.ok) {
-                    const tokenData = await tokenResponse.json();
-                    bearerToken = tokenData.token;
-                }
+                    if (tokenResponse.ok) {
+                        const tokenData = await tokenResponse.json();
+                        const bearerToken = tokenData.token;
 
-                // Search for the user document in fbUser index
-                const searchResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${bearerToken}`
-                    },
-                    body: JSON.stringify({
-                        index: 'fbUser',
-                        query: {
-                            q: '',
-                            filter: `userId = ${user_id}`,
-                            limit: 20
-                        },
-                        tenantId: oauthTenantId,
-                        attributesToRetrieve: ['id']
-                    })
-                });
-
-                if (searchResponse.ok) {
-                    const userData = await searchResponse.json();
-                    if (userData.hits && userData.hits.length > 0) {
-                        const userDocumentId = userData.hits[0].id;
-                        
-                        // Delete the user document
-                        await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
+                        // Search for the user document in fbUser index
+                        const searchResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${bearerToken}`
                             },
                             body: JSON.stringify({
-                                id: userDocumentId,
                                 index: 'fbUser',
-                                tenantId: oauthTenantId
+                                query: {
+                                    q: '',
+                                    filter: `userId = ${user_id}`,
+                                    limit: 20
+                                },
+                                tenantId: oauthTenantId,
+                                attributesToRetrieve: ['id']
                             })
                         });
+
+                        if (searchResponse.ok) {
+                            const userData = await searchResponse.json();
+                            if (userData.hits && userData.hits.length > 0) {
+                                const userDocumentId = userData.hits[0].id;
+                                
+                                // Delete the user document
+                                await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${bearerToken}`
+                                    },
+                                    body: JSON.stringify({
+                                        id: userDocumentId,
+                                        index: 'fbUser',
+                                        tenantId: oauthTenantId
+                                    })
+                                });
+                            }
+                        }
                     }
+                } else {
+                    console.log('No API key provided, skipping Meilisearch user cleanup');
                 }
             } catch (meilisearchError) {
                 console.error('Meilisearch user cleanup error:', meilisearchError);

@@ -160,133 +160,164 @@ class TenantsController {
     async deleteTenant(req, res) {
         try {
             const { id } = req.params;
+            console.log(`Attempting to delete tenant with ID: ${id}`);
 
-            // Check if tenant has associated clients
-            const clientsResult = await db.query(
-                'SELECT COUNT(*) as client_count FROM oauth_clients WHERE tenant_id = $1',
-                [id]
-            );
-
-            if (parseInt(clientsResult.rows[0].client_count) > 0) {
-                return res.status(400).json({ 
-                    error: 'Cannot delete tenant with existing clients. Please reassign or delete clients first.' 
-                });
-            }
-
-            const result = await db.query('DELETE FROM tenants WHERE id = $1 RETURNING id, tenant_id', [id]);
-
-            if (result.rows.length === 0) {
+            // Check if tenant exists
+            const tenantResult = await db.query('SELECT id, name, tenant_id FROM tenants WHERE id = $1', [id]);
+            if (tenantResult.rows.length === 0) {
                 return res.status(404).json({ error: 'Tenant not found' });
             }
+            
+            const tenant = tenantResult.rows[0];
+            const oauthTenantId = tenant.tenant_id;
+            console.log(`Found tenant: ${tenant.name} (${tenant.id})`);
 
-            const deletedTenant = result.rows[0];
-            const oauthTenantId = deletedTenant.tenant_id;
+            // Get all tenant users for Meilisearch cleanup
+            const tenantUsersResult = await db.query('SELECT id FROM tenant_users WHERE tenant_id = $1', [id]);
+            const tenantUsers = tenantUsersResult.rows;
+            console.log(`Found ${tenantUsers.length} tenant users to cleanup from Meilisearch`);
 
-            // Delete tenant and associated users from Meilisearch
+            // Begin transaction for cleanup
+            await db.query('BEGIN');
+
             try {
-                // Get bearer token for Meilisearch API
-                const tokenResponse = await fetch('http://localhost:3000/admin/token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': req.headers['x-api-key'] || ''
-                    }
-                });
+                // Delete in correct order respecting foreign key constraints
+                
+                // 1. Delete user sessions (depends on tenant_users)
+                await db.query('DELETE FROM user_sessions WHERE tenant_user_id IN (SELECT id FROM tenant_users WHERE tenant_id = $1)', [id]);
+                
+                // 2. Delete user role assignments (depends on tenant_users and tenants)
+                await db.query('DELETE FROM user_role_assignments WHERE tenant_id = $1', [id]);
+                
+                // 3. Delete tenant users (depends on tenants)
+                await db.query('DELETE FROM tenant_users WHERE tenant_id = $1', [id]);
 
-                let bearerToken = '';
-                if (tokenResponse.ok) {
-                    const tokenData = await tokenResponse.json();
-                    bearerToken = tokenData.token;
+                // 4. Delete OAuth tokens and codes (depends on tenants)
+                await db.query('DELETE FROM refresh_tokens WHERE tenant_id = $1', [id]);
+                await db.query('DELETE FROM access_tokens WHERE tenant_id = $1', [id]);
+                await db.query('DELETE FROM authorization_codes WHERE tenant_id = $1', [id]);
+
+                // 5. Delete tenant application associations (depends on tenants)
+                await db.query('DELETE FROM tenant_applications WHERE tenant_id = $1', [id]);
+
+                // 6. Finally delete the tenant itself
+                await db.query('DELETE FROM tenants WHERE id = $1', [id]);
+
+                await db.query('COMMIT');
+                console.log('Database deletion completed successfully');
+
+                // 7. Cleanup users from Meilisearch (after successful database deletion)
+                if (tenantUsers.length > 0) {
+                    await this.cleanupMeilisearchUsers(tenantUsers, oauthTenantId, req.headers['x-api-key']);
                 }
 
-                // Delete tenant from fbTenant index
-                const searchTenantResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${bearerToken}`
-                    },
-                    body: JSON.stringify({
-                        index: 'fbTenant',
-                        query: {
-                            q: '',
-                            filter: '',
-                            limit: 20
-                        },
-                        tenantId: oauthTenantId,
-                        attributesToRetrieve: ['id']
-                    })
+                res.json({ 
+                    message: 'Tenant deleted successfully', 
+                    deleted_users_count: tenantUsers.length 
                 });
+            } catch (deleteError) {
+                await db.query('ROLLBACK');
+                throw deleteError;
+            }
+        } catch (error) {
+            console.error('Delete tenant error:', error);
+            res.status(500).json({ 
+                error: 'Internal server error', 
+                details: error.message,
+                code: error.code,
+                constraint: error.constraint
+            });
+        }
+    }
 
-                if (searchTenantResponse.ok) {
-                    const tenantData = await searchTenantResponse.json();
-                    if (tenantData.hits && tenantData.hits.length > 0) {
-                        const tenantDocumentId = tenantData.hits[0].id;
-                        
-                        // Delete the tenant document
-                        await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${bearerToken}`
+    async cleanupMeilisearchUsers(tenantUsers, oauthTenantId, apiKey) {
+        try {
+            console.log(`Starting Meilisearch cleanup for ${tenantUsers.length} users`);
+            
+            // Only attempt Meilisearch cleanup if API key is provided
+            if (!apiKey) {
+                console.log('No API key provided, skipping Meilisearch cleanup');
+                return;
+            }
+
+            // Get bearer token for Meilisearch API
+            const tokenResponse = await fetch('http://localhost:3000/admin/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey
+                }
+            });
+
+            if (!tokenResponse.ok) {
+                console.log('Failed to get bearer token for Meilisearch, skipping cleanup');
+                return;
+            }
+
+            const tokenData = await tokenResponse.json();
+            const bearerToken = tokenData.token;
+
+            // Cleanup each user from Meilisearch
+            for (const user of tenantUsers) {
+                try {
+                    // Search for the user document in fbUser index
+                    const searchResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${bearerToken}`
+                        },
+                        body: JSON.stringify({
+                            index: 'fbUser',
+                            query: {
+                                q: '',
+                                filter: `userId = ${user.id}`,
+                                limit: 20
                             },
-                            body: JSON.stringify({
-                                id: tenantDocumentId,
-                                index: 'fbTenant',
-                                tenantId: oauthTenantId
-                            })
-                        });
-                    }
-                }
+                            tenantId: oauthTenantId,
+                            attributesToRetrieve: ['id']
+                        })
+                    });
 
-                // Delete all users associated with this tenant from fbUser index
-                const searchUsersResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${bearerToken}`
-                    },
-                    body: JSON.stringify({
-                        index: 'fbUser',
-                        query: {
-                            q: '',
-                            filter: '',
-                            limit: 1000
-                        },
-                        tenantId: oauthTenantId,
-                        attributesToRetrieve: ['id']
-                    })
-                });
-
-                if (searchUsersResponse.ok) {
-                    const usersData = await searchUsersResponse.json();
-                    if (usersData.hits && usersData.hits.length > 0) {
-                        // Delete each user document
-                        for (const user of usersData.hits) {
-                            await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
+                    if (searchResponse.ok) {
+                        const userData = await searchResponse.json();
+                        if (userData.hits && userData.hits.length > 0) {
+                            const userDocumentId = userData.hits[0].id;
+                            console.log(`Deleting Meilisearch document ${userDocumentId} for user ${user.id}`);
+                            
+                            // Delete the user document
+                            const deleteResponse = await fetch('https://meilisearch.api.fuelbadger.brockai.com/meilisearch/delete', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${bearerToken}`
                                 },
                                 body: JSON.stringify({
-                                    id: user.id,
+                                    id: userDocumentId,
                                     index: 'fbUser',
-                                    tenantId: id
+                                    tenantId: oauthTenantId
                                 })
                             });
+
+                            if (deleteResponse.ok) {
+                                console.log(`Successfully deleted Meilisearch document for user ${user.id}`);
+                            } else {
+                                console.log(`Failed to delete Meilisearch document for user ${user.id}`);
+                            }
+                        } else {
+                            console.log(`No Meilisearch document found for user ${user.id}`);
                         }
                     }
+                } catch (userCleanupError) {
+                    console.error(`Error cleaning up Meilisearch for user ${user.id}:`, userCleanupError);
+                    // Continue with other users even if one fails
                 }
-            } catch (meilisearchError) {
-                console.error('Meilisearch cleanup error:', meilisearchError);
-                // Don't fail the deletion if Meilisearch cleanup fails
             }
-
-            res.status(204).send();
-        } catch (error) {
-            console.error('Delete tenant error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            
+            console.log('Meilisearch cleanup completed');
+        } catch (meilisearchError) {
+            console.error('Meilisearch cleanup error:', meilisearchError);
+            // Don't fail the deletion if Meilisearch cleanup fails
         }
     }
 
