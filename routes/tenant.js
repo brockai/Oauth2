@@ -351,10 +351,6 @@ router.post('/users', authenticateToken, requireTenantAdmin, tenantUsersControll
  *                 email:
  *                   type: string
  *                   format: email
- *                 first_name:
- *                   type: string
- *                 last_name:
- *                   type: string
  *                 is_active:
  *                   type: boolean
  *                 is_admin:

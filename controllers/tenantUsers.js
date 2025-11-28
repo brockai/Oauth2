@@ -750,7 +750,7 @@ class TenantUsersController {
             const { user_id } = req.params;
 
             const result = await db.query(
-                `SELECT id, username, email, first_name, last_name, is_active, is_admin,
+                `SELECT id, username, email, is_active, is_admin,
                         email_verified, last_login_at, created_at, updated_at
                  FROM tenant_users
                  WHERE id = $1 AND tenant_id = $2`,
