@@ -1,27 +1,38 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const getDatabaseUrl = () => {
-    const baseUrl = process.env.DATABASE_URL;
-    const dbMode = process.env.DB_MODE || 'main';
-    
-    if (dbMode === 'demo') {
-        return baseUrl.replace('/oauth2_db', '/demo');
-    }
-    return baseUrl;
-};
-
-const pool = new Pool({
-    connectionString: getDatabaseUrl(),
+// Create separate pools for main and demo databases
+const mainPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
     ssl: false  // Database server doesn't support SSL
 });
 
-pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
+const demoPool = new Pool({
+    connectionString: process.env.DATABASE_URL.replace('/oauth2_db', '/demo'),
+    ssl: false  // Database server doesn't support SSL
+});
+
+// Error handlers for both pools
+mainPool.on('error', (err) => {
+    console.error('Unexpected error on main database client', err);
     process.exit(-1);
 });
 
+demoPool.on('error', (err) => {
+    console.error('Unexpected error on demo database client', err);
+    process.exit(-1);
+});
+
+// Function to get the appropriate pool based on current DB_MODE
+const getCurrentPool = () => {
+    const dbMode = process.env.DB_MODE || 'main';
+    return dbMode === 'demo' ? demoPool : mainPool;
+};
+
 module.exports = {
-    query: (text, params) => pool.query(text, params),
-    pool
+    query: (text, params) => getCurrentPool().query(text, params),
+    pool: getCurrentPool(), // For backwards compatibility
+    mainPool,
+    demoPool,
+    getCurrentPool
 };
