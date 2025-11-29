@@ -1,7 +1,7 @@
 # OAuth 2.0 Server
 
-[![OAuth 2 Console](https://img.shields.io/badge/OAuth_2_Console-Live_Demo-blue?style=for-the-badge&logo=react)](https://oauth2.demo.fuelbadger.brockai.com/)
-[![OAuth 2 API](https://img.shields.io/badge/OAuth_2_API-Documentation-green?style=for-the-badge&logo=swagger)](https://oauth2.api.fuelbadger.brockai.com/api-docs/)
+<a href="https://oauth2.demo.fuelbadger.brockai.com/" target="_blank"><img src="https://img.shields.io/badge/OAuth_2_Console-Live_Demo-blue?style=for-the-badge&logo=react" alt="OAuth 2 Console"></a>
+<a href="https://oauth2.api.fuelbadger.brockai.com/api-docs/" target="_blank"><img src="https://img.shields.io/badge/OAuth_2_API-Documentation-green?style=for-the-badge&logo=swagger" alt="OAuth 2 API"></a>
 
 A complete OAuth 2.0 authorization server with multi-client support, tenant management, API key system, comprehensive logging, and admin management interface built with Node.js, Express, PostgreSQL, React, and Next.js.
 
