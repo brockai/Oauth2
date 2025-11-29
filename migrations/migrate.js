@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const db = require('../database/connection');
+const { syncDemoDatabase } = require('../scripts/sync-demo-database');
 
 async function migrate() {
     try {
@@ -42,6 +43,16 @@ async function migrate() {
         `);
         
         console.log('All tables created:', result.rows.map(row => row.tablename));
+        
+        // Sync demo database after main migration
+        console.log('\n🔄 Syncing demo database...');
+        try {
+            await syncDemoDatabase();
+            console.log('✅ Demo database synced successfully!');
+        } catch (error) {
+            console.error('❌ Demo database sync failed:', error.message);
+            // Don't fail the main migration if demo sync fails
+        }
         
     } catch (error) {
         console.error('Migration failed:', error);
