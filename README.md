@@ -125,6 +125,7 @@ This application supports dual environment deployment with both production and d
 - **Demo Environment**: Connects to the demo database (`DB_MODE=demo`)  
   - Used for demonstrations, testing, and sandbox operations
   - Available at: https://oauth2.demo.fuelbadger.brockai.com
+  - **Demo Admin Login:** demo / demo (automatically created during deployment)
 
 ### **Database Switching**
 
@@ -149,6 +150,14 @@ npm run sync-demo  # Recreates demo database with current schema
 ```
 
 This ensures the demo environment always has the latest database structure while maintaining separate test data.
+
+### **Demo Admin Account**
+
+The demo environment automatically creates a demo admin account during deployment:
+- **Username:** demo
+- **Password:** demo
+- **Purpose:** Provides immediate access to demo the admin interface features
+- **Auto-created:** Generated during every deployment to ensure availability
 
 ## Usage
 
@@ -182,7 +191,9 @@ cd client && npm run build && npm start
 
 **Production (Dual Environment Setup):**
 - **Production Console:** https://oauth2.console.fuelbadger.brockai.com
-- **Demo Console:** https://oauth2.demo.fuelbadger.brockai.com
+  - **Admin Login:** admin / admin123 (changeable via Profile page)
+- **Demo Console:** https://oauth2.demo.fuelbadger.brockai.com  
+  - **Demo Admin Login:** demo / demo (for testing and demonstrations)
 - **OAuth API Server:** https://oauth2.api.fuelbadger.brockai.com
 - **API Documentation:** https://oauth2.api.fuelbadger.brockai.com/api-docs
 
@@ -470,6 +481,7 @@ cd client && npm run build  # Build Next.js client
 # Database operations
 npm run migrate      # Run migrations
 npm run sync-demo    # Sync demo database with production schema
+npm run create-demo-admin  # Create demo admin user (demo/demo)
 
 # Testing and linting
 npm test             # Run tests (if available)
