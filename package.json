@@ -9,7 +9,8 @@
     "build": "next build",
     "client": "cd client && npm run dev",
     "migrate": "node migrations/migrate.js",
-    "sync-demo": "node scripts/sync-demo-database.js"
+    "sync-demo": "node scripts/sync-demo-database.js",
+    "create-demo-admin": "node scripts/create-admin.js demo demo"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

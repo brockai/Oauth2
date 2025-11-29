@@ -164,7 +164,7 @@ jobs:
           
           # Create .env file with demo settings
           cat > .env << EOF
-          NODE_ENV=${{ secrets.NODE_ENV }}
+          NODE_ENV=${{ secrets.NODE_DEMO_ENV }}
           PORT=${{ secrets.DEMO_PORT }}
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=${{ secrets.DB_PORT }}
@@ -172,7 +172,7 @@ jobs:
           DB_USER=${{ secrets.DB_DEMO_USER }}
           DB_PASSWORD=${{ secrets.DB_DEMO_PASSWORD }}
           DATABASE_URL=${{ secrets.DATABASE_DEMO_URL }}
-          JWT_SECRET=${{ secrets.JWT_DEMO_SECRET }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
           DB_MODE=demo
           EOF
           
@@ -197,6 +197,11 @@ jobs:
           # Sync demo database
           echo "Syncing demo database..."
           npm run sync-demo || echo "Demo database sync failed, but continuing deployment"
+          
+          # Create demo admin user
+          echo "Creating demo admin user..."
+          cd /var/www/oauth2.demo/server
+          npm run create-demo-admin || echo "Demo admin creation failed or user already exists"
           
           # Install production client dependencies
           cd /var/www/oauth2.console/client
