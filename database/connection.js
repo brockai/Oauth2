@@ -1,8 +1,18 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const getDatabaseUrl = () => {
+    const baseUrl = process.env.DATABASE_URL;
+    const dbMode = process.env.DB_MODE || 'main';
+    
+    if (dbMode === 'demo') {
+        return baseUrl.replace('/oauth2_db', '/demo');
+    }
+    return baseUrl;
+};
+
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: getDatabaseUrl(),
     ssl: false  // Database server doesn't support SSL
 });
 
