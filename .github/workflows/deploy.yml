@@ -165,7 +165,7 @@ jobs:
           # Create .env file with demo settings
           cat > .env << EOF
           NODE_ENV=${{ secrets.NODE_ENV }}
-          PORT=3001
+          PORT=${{ secrets.DEMO_PORT }}
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=${{ secrets.DB_PORT }}
           DB_NAME=${{ secrets.DB_DEMO_NAME }}
