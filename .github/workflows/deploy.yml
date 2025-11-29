@@ -207,11 +207,11 @@ jobs:
           NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           EOF
           
-          # Install demo client dependencies  
-          cd /var/www/oauth2.demo/client
+          # Install client dependencies
+          cd /var/www/oauth2.console/client
           npm ci --production
           
-          # Create demo client .env
+          # Create client .env
           cat > .env.local << EOF
           NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           EOF
@@ -225,6 +225,3 @@ jobs:
           
           cd /var/www/oauth2.console/client
           pm2 restart oauth2-client || pm2 start "npm start" --name oauth2-client
-          
-          cd /var/www/oauth2.demo/client
-          pm2 restart oauth2-demo-client || pm2 start "npm start" --name oauth2-demo-client
