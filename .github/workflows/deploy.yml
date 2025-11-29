@@ -160,7 +160,7 @@ jobs:
           
           # Install demo server dependencies and create .env
           cd /var/www/oauth2.demo/server
-          npm ci --production
+          npm ci
           
           # Create .env file with demo settings
           cat > .env << EOF
