@@ -74,14 +74,22 @@ jobs:
           # Stop existing services
           pm2 stop oauth2-server || true
           pm2 stop oauth2-client || true
+          pm2 stop oauth2-demo-server || true
+          pm2 stop oauth2-demo-client || true
           
-          # Prepare server directory
+          # Prepare server directories
           mkdir -p /var/www/oauth2.api/server
           rm -rf /var/www/oauth2.api/server/*
           
-          # Prepare client directory  
+          mkdir -p /var/www/oauth2.demo/server
+          rm -rf /var/www/oauth2.demo/server/*
+          
+          # Prepare client directories
           mkdir -p /var/www/oauth2.console/client
           rm -rf /var/www/oauth2.console/client/*
+          
+          mkdir -p /var/www/oauth2.demo/client
+          rm -rf /var/www/oauth2.demo/client/*
 
     - name: Copy server files
       uses: appleboy/scp-action@v0.1.4
@@ -93,7 +101,17 @@ jobs:
         target: "/var/www/oauth2.api/server"
         strip_components: 2
 
-    - name: Copy client files
+    - name: Copy demo server files
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "dist/server/*"
+        target: "/var/www/oauth2.demo/server"
+        strip_components: 2
+
+    - name: Copy production client files
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -101,6 +119,16 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "dist/client/*"
         target: "/var/www/oauth2.console/client"
+        strip_components: 2
+
+    - name: Copy demo client files
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "dist/client/*"
+        target: "/var/www/oauth2.demo/client"
         strip_components: 2
 
     - name: Copy docker-compose file
@@ -126,7 +154,7 @@ jobs:
           # Wait for PostgreSQL to be ready
           sleep 10
           
-          # Install server dependencies and create .env
+          # Install production server dependencies and create .env
           cd /var/www/oauth2.api/server
           npm ci --production
           
@@ -141,6 +169,25 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
+          DB_MODE=main
+          EOF
+          
+          # Install demo server dependencies and create .env
+          cd /var/www/oauth2.demo/server
+          npm ci --production
+          
+          # Create .env file with demo settings
+          cat > .env << EOF
+          NODE_ENV=${{ secrets.NODE_ENV }}
+          PORT=3001
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_NAME=${{ secrets.DB_DEMO_NAME }}
+          DB_USER=${{ secrets.DB_DEMO_USER }}
+          DB_PASSWORD=${{ secrets.DB_DEMO_PASSWORD }}
+          DATABASE_URL=${{ secrets.DATABASE_DEMO_URL }}
+          JWT_SECRET=${{ secrets.JWT_DEMO_SECRET }}
+          DB_MODE=demo
           EOF
           
           # Wait longer for PostgreSQL to be fully ready
@@ -161,13 +208,37 @@ jobs:
             .finally(() => pool.end());
           " || echo "Database verification failed"
           
-          # Install client dependencies and start
+          # Sync demo database
+          echo "Syncing demo database..."
+          npm run sync-demo || echo "Demo database sync failed, but continuing deployment"
+          
+          # Install production client dependencies
           cd /var/www/oauth2.console/client
           npm ci --production
           
-          # Start or restart both services with PM2
+          # Create production client .env
+          cat > .env.local << EOF
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          EOF
+          
+          # Install demo client dependencies  
+          cd /var/www/oauth2.demo/client
+          npm ci --production
+          
+          # Create demo client .env
+          cat > .env.local << EOF
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          EOF
+          
+          # Start or restart all services with PM2
           cd /var/www/oauth2.api/server
           pm2 restart oauth2-server || pm2 start server.js --name oauth2-server
           
+          cd /var/www/oauth2.demo/server
+          pm2 restart oauth2-demo-server || pm2 start server.js --name oauth2-demo-server
+          
           cd /var/www/oauth2.console/client
           pm2 restart oauth2-client || pm2 start "npm start" --name oauth2-client
+          
+          cd /var/www/oauth2.demo/client
+          pm2 restart oauth2-demo-client || pm2 start "npm start" --name oauth2-demo-client
