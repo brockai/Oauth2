@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -7,9 +7,23 @@ export default function Login() {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+
+  // Check if we're in demo mode
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isDemo = window.location.hostname === 'oauth2.demo.fuelbadger.brockai.com';
+      setIsDemoMode(isDemo);
+      
+      // Pre-fill demo credentials if in demo mode
+      if (isDemo) {
+        setCredentials({ username: 'demo', password: 'demo123' });
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,10 +77,28 @@ export default function Login() {
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             OAuth 2.0 Server
+            {isDemoMode && (
+              <span className="ml-2 text-lg bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 px-2 py-1 rounded-full text-sm font-normal">
+                Demo
+              </span>
+            )}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Sign in with your admin or tenant credentials
+            {isDemoMode 
+              ? "Demo environment - credentials pre-filled below"
+              : "Sign in with your admin or tenant credentials"
+            }
           </p>
+          
+          {isDemoMode && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md">
+              <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
+                <span className="font-semibold">Demo Credentials:</span><br />
+                Username: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">demo</code> | 
+                Password: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">demo123</code>
+              </p>
+            </div>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">

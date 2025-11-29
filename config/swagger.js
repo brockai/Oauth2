@@ -36,8 +36,12 @@ Some endpoints (like POST /admin/token) require API key authentication via the \
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Development server'
+        url: process.env.NODE_ENV === 'production' 
+          ? 'https://oauth2.api.fuelbadger.brockai.com'
+          : 'http://localhost:3000',
+        description: process.env.NODE_ENV === 'production' 
+          ? 'Production server'
+          : 'Development server'
       }
     ],
     components: {
