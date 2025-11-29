@@ -36,12 +36,12 @@ Some endpoints (like POST /admin/token) require API key authentication via the \
     },
     servers: [
       {
-        url: (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('fuelbadger.brockai.com') && process.env.DATABASE_URL.includes('oauth2_db'))
-          ? 'https://oauth2.api.fuelbadger.brockai.com'
-          : 'http://localhost:3000',
-        description: (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('fuelbadger.brockai.com') && process.env.DATABASE_URL.includes('oauth2_db'))
-          ? 'Production server'
-          : 'Development server'
+        url: 'https://oauth2.api.fuelbadger.brockai.com',
+        description: 'Production server'
+      },
+      {
+        url: 'http://localhost:3000',
+        description: 'Development server'
       }
     ],
     components: {
