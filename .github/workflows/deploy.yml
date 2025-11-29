@@ -194,14 +194,12 @@ jobs:
             .finally(() => pool.end());
           " || echo "Database verification failed"
           
-          # Sync demo database
+          # Sync demo database and create demo admin
           echo "Syncing demo database..."
           npm run sync-demo || echo "Demo database sync failed, but continuing deployment"
           
-          # Create demo admin user
           echo "Creating demo admin user..."
-          cd /var/www/oauth2.demo/server
-          npm run create-demo-admin || echo "Demo admin creation failed or user already exists"
+          DB_MODE=demo npm run create-demo-admin || echo "Demo admin creation failed or user already exists"
           
           # Install production client dependencies
           cd /var/www/oauth2.console/client

@@ -11,32 +11,60 @@ const mainDb = new Pool({
     password: process.env.DB_PASSWORD || 'oauth2_pass'
 });
 
-const demoDb = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: 'demo',
-    user: process.env.DB_USER || 'oauth2_user',
-    password: process.env.DB_PASSWORD || 'oauth2_pass'
-});
-
 async function syncDemoDatabase() {
+    let adminDb, demoDb;
+    
     try {
         console.log('🔄 Syncing demo database with main database schema...');
         
-        // 1. Drop and recreate demo database schema
+        // Connect to postgres database to create demo database
+        adminDb = new Pool({
+            host: process.env.DB_HOST || 'localhost',
+            port: process.env.DB_PORT || 5432,
+            database: 'postgres', // Connect to postgres database to create demo
+            user: process.env.DB_USER || 'oauth2_user',
+            password: process.env.DB_PASSWORD || 'oauth2_pass'
+        });
+        
+        // 1. Create demo database if it doesn't exist
+        console.log('Creating demo database if it doesn\'t exist...');
+        try {
+            await adminDb.query('CREATE DATABASE demo');
+            console.log('✓ Demo database created');
+        } catch (error) {
+            if (error.code === '42P04') { // Database already exists
+                console.log('✓ Demo database already exists');
+            } else {
+                throw error;
+            }
+        }
+        
+        // Close admin connection and connect to demo database
+        await adminDb.end();
+        
+        // Connect to the demo database
+        demoDb = new Pool({
+            host: process.env.DB_HOST || 'localhost',
+            port: process.env.DB_PORT || 5432,
+            database: 'demo',
+            user: process.env.DB_USER || 'oauth2_user',
+            password: process.env.DB_PASSWORD || 'oauth2_pass'
+        });
+        
+        // 2. Drop and recreate demo database schema
         console.log('Recreating demo database schema...');
-        await demoDb.query('DROP SCHEMA public CASCADE');
+        await demoDb.query('DROP SCHEMA IF EXISTS public CASCADE');
         await demoDb.query('CREATE SCHEMA public');
         await demoDb.query('GRANT ALL ON SCHEMA public TO oauth2_user');
         await demoDb.query('GRANT ALL ON SCHEMA public TO public');
         
-        // 2. Execute the main schema
+        // 3. Execute the main schema
         const schemaPath = path.join(__dirname, '..', 'database', 'schema.sql');
         const schema = fs.readFileSync(schemaPath, 'utf8');
         await demoDb.query(schema);
         console.log('✓ Main schema applied to demo database');
         
-        // 3. Execute all migrations in order
+        // 4. Execute all migrations in order
         const migrationsDir = path.join(__dirname, '..', 'database', 'migrations');
         const migrationFiles = fs.readdirSync(migrationsDir)
             .filter(file => file.endsWith('.sql'))
@@ -55,7 +83,7 @@ async function syncDemoDatabase() {
             }
         }
         
-        // 4. Update demo-specific data
+        // 5. Update demo-specific data
         await demoDb.query(`
             UPDATE tenants 
             SET name = 'Demo Tenant', 
@@ -90,7 +118,8 @@ async function syncDemoDatabase() {
         process.exit(1);
     } finally {
         await mainDb.end();
-        await demoDb.end();
+        if (demoDb) await demoDb.end();
+        if (adminDb) await adminDb.end();
         process.exit(0);
     }
 }
