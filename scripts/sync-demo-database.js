@@ -41,6 +41,7 @@ async function syncDemoDatabase() {
         
         // Close admin connection and connect to demo database
         await adminDb.end();
+        adminDb = null; // Mark as closed to avoid double-end in finally block
         
         // Connect to the demo database
         demoDb = new Pool({
@@ -117,9 +118,24 @@ async function syncDemoDatabase() {
         console.error('❌ Demo database sync failed:', error);
         process.exit(1);
     } finally {
-        await mainDb.end();
-        if (demoDb) await demoDb.end();
-        if (adminDb) await adminDb.end();
+        try {
+            await mainDb.end();
+        } catch (err) {
+            console.error('Error closing main DB:', err.message);
+        }
+        
+        try {
+            if (demoDb) await demoDb.end();
+        } catch (err) {
+            console.error('Error closing demo DB:', err.message);
+        }
+        
+        try {
+            if (adminDb) await adminDb.end();
+        } catch (err) {
+            console.error('Error closing admin DB:', err.message);
+        }
+        
         process.exit(0);
     }
 }

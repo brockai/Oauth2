@@ -55,6 +55,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Cookie parsing middleware (required for CSRF)
 app.use(csrfMiddleware.cookieParser);
 
+// Database mode detection middleware
+app.use((req, res, next) => {
+  const origin = req.get('origin') || req.get('referer') || '';
+  
+  // Check if request comes from demo domain
+  if (origin.includes('oauth2.demo.fuelbadger.brockai.com')) {
+    process.env.DB_MODE = 'demo';
+  } else {
+    process.env.DB_MODE = 'main';
+  }
+  
+  next();
+});
+
 // API logging middleware (should be after body parsing)
 app.use(apiLoggerMiddleware);
 
