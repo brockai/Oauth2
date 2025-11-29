@@ -75,7 +75,6 @@ jobs:
           pm2 stop oauth2-server || true
           pm2 stop oauth2-client || true
           pm2 stop oauth2-demo-server || true
-          pm2 stop oauth2-demo-client || true
           
           # Prepare server directories
           mkdir -p /var/www/oauth2.api/server
@@ -84,12 +83,9 @@ jobs:
           mkdir -p /var/www/oauth2.demo/server
           rm -rf /var/www/oauth2.demo/server/*
           
-          # Prepare client directories
+          # Prepare client directory (single client for both environments)
           mkdir -p /var/www/oauth2.console/client
           rm -rf /var/www/oauth2.console/client/*
-          
-          mkdir -p /var/www/oauth2.demo/client
-          rm -rf /var/www/oauth2.demo/client/*
 
     - name: Copy server files
       uses: appleboy/scp-action@v0.1.4
@@ -111,7 +107,7 @@ jobs:
         target: "/var/www/oauth2.demo/server"
         strip_components: 2
 
-    - name: Copy production client files
+    - name: Copy client files
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -119,16 +115,6 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "dist/client/*"
         target: "/var/www/oauth2.console/client"
-        strip_components: 2
-
-    - name: Copy demo client files
-      uses: appleboy/scp-action@v0.1.4
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "dist/client/*"
-        target: "/var/www/oauth2.demo/client"
         strip_components: 2
 
     - name: Copy docker-compose file

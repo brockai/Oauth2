@@ -92,6 +92,7 @@ A complete OAuth 2.0 authorization server with multi-client support, tenant mana
    JWT_SECRET=your-super-secret-jwt-key-here
    PORT=3000
    NODE_ENV=development
+   # DB_MODE=demo  # Set to 'demo' to connect to demo database, leave unset for main database
    ```
    
    **For Production (create `.env.production`):**
@@ -100,12 +101,51 @@ A complete OAuth 2.0 authorization server with multi-client support, tenant mana
    JWT_SECRET=your-super-secret-jwt-key-here
    PORT=3000
    NODE_ENV=production
+   DB_MODE=main
    ```
 
 4. **Run database migrations:**
    ```bash
    npm run migrate
    ```
+
+## 🌐 Dual Environment Setup
+
+This application supports dual environment deployment with both production and demo instances:
+
+### **Environment Overview**
+
+- **Production Environment**: Connects to the main database (`DB_MODE=main`)
+  - Used for live application data and real user management
+  - Available at: https://oauth2.console.fuelbadger.brockai.com
+
+- **Demo Environment**: Connects to the demo database (`DB_MODE=demo`)  
+  - Used for demonstrations, testing, and sandbox operations
+  - Available at: https://oauth2.demo.fuelbadger.brockai.com
+
+### **Database Switching**
+
+The application automatically switches databases based on the `DB_MODE` environment variable:
+
+- **`DB_MODE=main`** (or unset): Connects to production database
+- **`DB_MODE=demo`**: Connects to demo database with same schema but isolated data
+
+### **Deployment Architecture**
+
+Both environments share the same API server but maintain separate:
+- Database connections (production vs demo databases)
+- Client applications (separate Next.js instances)
+- PM2 processes for isolation
+- Environment configurations
+
+### **Demo Database Synchronization**
+
+The demo database automatically syncs its schema with the production database:
+```bash
+npm run sync-demo  # Recreates demo database with current schema
+```
+
+This ensures the demo environment always has the latest database structure while maintaining separate test data.
 
 ## Usage
 
@@ -131,10 +171,17 @@ cd client && npm run build && npm start
 
 ### Access the application
 
+**Development:**
 - **OAuth Server:** http://localhost:3000
 - **Admin Interface:** http://localhost:3001
 - **Admin Login:** admin / admin123 (changeable via Profile page)
 - **API Documentation:** http://localhost:3000/api-docs (Swagger UI)
+
+**Production (Dual Environment Setup):**
+- **Production Console:** https://oauth2.console.fuelbadger.brockai.com
+- **Demo Console:** https://oauth2.demo.fuelbadger.brockai.com
+- **OAuth API Server:** https://oauth2.api.fuelbadger.brockai.com
+- **API Documentation:** https://oauth2.api.fuelbadger.brockai.com/api-docs
 
 ### Admin Interface Navigation
 
@@ -419,12 +466,35 @@ cd client && npm run build  # Build Next.js client
 
 # Database operations
 npm run migrate      # Run migrations
-npm run seed         # Seed database (if available)
+npm run sync-demo    # Sync demo database with production schema
 
 # Testing and linting
 npm test             # Run tests (if available)
 npm run lint         # Run linting (if available)
+
+# Environment testing
+DB_MODE=demo npm run dev     # Test with demo database
+DB_MODE=main npm run dev     # Test with production database (default)
 ```
+
+### **Deployment Configuration**
+
+The application uses GitHub Actions for automated deployment to both environments. Required secrets:
+
+**Production Database:**
+- `DATABASE_URL` - Production database connection string
+- `JWT_SECRET` - Production JWT secret key
+
+**Demo Database:**  
+- `DATABASE_DEMO_URL` - Demo database connection string
+- `DB_DEMO_NAME` - Demo database name
+- `DB_DEMO_USER` - Demo database username  
+- `DB_DEMO_PASSWORD` - Demo database password
+- `JWT_DEMO_SECRET` - Demo JWT secret key
+
+**Shared Configuration:**
+- `SSH_HOST`, `SSH_USERNAME`, `SSH_PRIVATE_KEY` - Deployment server access
+- `NEXT_PUBLIC_API_URL` - API server URL for client applications
 
 ### **Monitoring & Debugging**
 
