@@ -35,6 +35,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Demo detection middleware
+const demoDetection = require('./middleware/demoDetection');
+app.use(demoDetection);
+
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
