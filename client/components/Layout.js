@@ -8,6 +8,9 @@ export default function Layout({ children }) {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
+  // Check if user is logged into demo environment
+  const isDemoUser = typeof window !== 'undefined' && window.location.hostname === 'oauth2.demo.brockai.com';
+
   const handleLogout = () => {
     logout();
     router.push('/login');
@@ -114,12 +117,14 @@ export default function Layout({ children }) {
                 )}
               </button>
               <span className="text-sm text-gray-500 dark:text-gray-400">Welcome, {user.username}</span>
-              <Link
-                href="/profile"
-                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              >
-                Profile
-              </Link>
+              {!isDemoUser && (
+                <Link
+                  href="/profile"
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  Profile
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
