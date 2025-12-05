@@ -23,11 +23,11 @@ demoPool.on('error', (err) => {
     process.exit(-1);
 });
 
-// Function to get the appropriate pool based on hostname or DB_MODE
+// Function to get the appropriate pool based on origin header or DB_MODE
 const getCurrentPool = (req = null) => {
-    // Check hostname first if request is available
-    if (req && req.headers && req.headers.host) {
-        if (req.headers.host === 'oauth2.demo.brockai.com') {
+    // Check origin header first if request is available
+    if (req && req.headers && req.headers.origin) {
+        if (req.headers.origin === 'https://oauth2.demo.brockai.com') {
             return demoPool;
         }
     }
