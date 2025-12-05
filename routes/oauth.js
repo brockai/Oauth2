@@ -4,6 +4,7 @@ const oauthController = require('../controllers/oauth');
 const tenantUsersController = require('../controllers/tenantUsers');
 const rateLimit = require('express-rate-limit');
 const csrfMiddleware = require('../middleware/csrf');
+const { authenticateClient } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -185,7 +186,7 @@ router.post('/token', tokenLimit, csrfMiddleware.validateToken, oauthController.
  *     summary: Refresh access token
  *     tags: [OAuth 2.0]
  *     security: []
- *     description: Uses a refresh token to obtain a new access token
+ *     description: Uses a refresh token to obtain a new access token. Requires client authentication.
  *     requestBody:
  *       required: true
  *       content:
@@ -195,6 +196,8 @@ router.post('/token', tokenLimit, csrfMiddleware.validateToken, oauthController.
  *             required:
  *               - grant_type
  *               - refresh_token
+ *               - client_id
+ *               - client_secret
  *             properties:
  *               grant_type:
  *                 type: string
@@ -202,6 +205,12 @@ router.post('/token', tokenLimit, csrfMiddleware.validateToken, oauthController.
  *               refresh_token:
  *                 type: string
  *                 description: Valid refresh token
+ *               client_id:
+ *                 type: string
+ *                 description: OAuth 2.0 client identifier
+ *               client_secret:
+ *                 type: string
+ *                 description: OAuth 2.0 client secret
  *     parameters:
  *       - in: header
  *         name: X-CSRF-Token
@@ -223,7 +232,7 @@ router.post('/token', tokenLimit, csrfMiddleware.validateToken, oauthController.
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/token/refresh', tokenLimit, csrfMiddleware.validateToken, oauthController.refreshToken);
+router.post('/token/refresh', tokenLimit, authenticateClient, csrfMiddleware.validateToken, oauthController.refreshToken);
 
 // OAuth 2.0 User Authentication endpoints for tenant users (public endpoints)
 /**
@@ -319,6 +328,7 @@ router.post('/logout', csrfMiddleware.validateToken, tenantUsersController.logou
  *     description: |
  *       Determines the active state and metadata of an OAuth 2.0 token.
  *       Compliant with RFC 7662 - OAuth 2.0 Token Introspection.
+ *       Requires client authentication via client_id and client_secret.
  *     requestBody:
  *       required: true
  *       content:
@@ -327,20 +337,38 @@ router.post('/logout', csrfMiddleware.validateToken, tenantUsersController.logou
  *             type: object
  *             required:
  *               - token
+ *               - client_id
+ *               - client_secret
  *             properties:
  *               token:
  *                 type: string
  *                 description: The string value of the token to introspect
  *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *               client_id:
+ *                 type: string
+ *                 description: OAuth 2.0 client identifier
+ *                 example: my_client_id
+ *               client_secret:
+ *                 type: string
+ *                 description: OAuth 2.0 client secret
+ *                 example: my_client_secret
  *         application/x-www-form-urlencoded:
  *           schema:
  *             type: object
  *             required:
  *               - token
+ *               - client_id
+ *               - client_secret
  *             properties:
  *               token:
  *                 type: string
  *                 description: The string value of the token to introspect
+ *               client_id:
+ *                 type: string
+ *                 description: OAuth 2.0 client identifier
+ *               client_secret:
+ *                 type: string
+ *                 description: OAuth 2.0 client secret
  *     responses:
  *       200:
  *         description: Token introspection response
@@ -433,6 +461,6 @@ router.post('/logout', csrfMiddleware.validateToken, tenantUsersController.logou
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/introspect', oauthController.introspect);
+router.post('/introspect', authenticateClient, oauthController.introspect);
 
 module.exports = router;
