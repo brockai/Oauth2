@@ -10,14 +10,10 @@ class AdminController {
                 return res.status(400).json({ error: 'Username and password required' });
             }
 
-            // Debug: Log hostname for troubleshooting
-            console.log('Login attempt - Host:', req.headers.host, 'Username:', username);
-
             // First, try to find user in admin users table
             const adminUserResult = await db.query(
                 'SELECT *, \'admin\' as user_type FROM users WHERE username = $1',
-                [username],
-                req
+                [username]
             );
 
             let user = null;
@@ -33,8 +29,7 @@ class AdminController {
                      FROM tenant_users tu
                      JOIN tenants t ON tu.tenant_id = t.id
                      WHERE tu.username = $1 AND tu.is_active = true AND t.is_active = true`,
-                    [username],
-                    req
+                    [username]
                 );
 
                 if (tenantUserResult.rows.length > 0) {

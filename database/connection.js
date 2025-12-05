@@ -23,22 +23,14 @@ demoPool.on('error', (err) => {
     process.exit(-1);
 });
 
-// Function to get the appropriate pool based on origin header or DB_MODE
-const getCurrentPool = (req = null) => {
-    // Check origin header first if request is available
-    if (req && req.headers && req.headers.origin) {
-        if (req.headers.origin === 'https://oauth2.demo.brockai.com') {
-            return demoPool;
-        }
-    }
-    
-    // Fall back to DB_MODE environment variable
+// Function to get the appropriate pool based on DB_MODE
+const getCurrentPool = () => {
     const dbMode = process.env.DB_MODE || 'main';
     return dbMode === 'demo' ? demoPool : mainPool;
 };
 
 module.exports = {
-    query: (text, params, req) => getCurrentPool(req).query(text, params),
+    query: (text, params) => getCurrentPool().query(text, params),
     pool: getCurrentPool(), // For backwards compatibility
     mainPool,
     demoPool,
