@@ -32,7 +32,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://oauth2.console.fuelbadger.brockai.com', 'https://oauth2.demo.fuelbadger.brockai.com', 'https://web.fuelbadger.brockai.com', 'http://localhost:3001']
+    ? ['https://oauth2.console.brockai.com', 'https://oauth2.demo.brockai.com', 'https://web.fuelbadger.brockai.com', 'http://localhost:3001']
     : ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
