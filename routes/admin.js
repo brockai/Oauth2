@@ -73,6 +73,61 @@ const loginLimit = rateLimit({
  */
 router.post('/login', loginLimit, adminController.login);
 
+// Demo login endpoint that always uses demo database
+router.post('/demo/login', loginLimit, async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password required' });
+        }
+
+        const bcrypt = require('bcryptjs');
+        const jwt = require('jsonwebtoken');
+        const db = require('../database/connection');
+
+        // Force demo database connection
+        const demoUserResult = await db.demoPool.query(
+            'SELECT *, \'admin\' as user_type FROM users WHERE username = $1',
+            [username]
+        );
+
+        if (demoUserResult.rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const user = demoUserResult.rows[0];
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign(
+            { 
+                userId: user.id, 
+                username: user.username, 
+                user_type: 'admin',
+                is_admin: user.is_admin
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                user_type: 'admin',
+                is_admin: user.is_admin
+            }
+        });
+    } catch (error) {
+        console.error('Demo login error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // API Key Authentication - Generate Admin Token
 /**
  * @swagger

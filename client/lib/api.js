@@ -53,7 +53,12 @@ const getApiBasePath = () => {
 };
 
 export const authAPI = {
-  login: (credentials) => api.post('/admin/login', credentials),
+  login: (credentials) => {
+    // Use demo endpoint if on demo hostname
+    const isDemo = typeof window !== 'undefined' && window.location.hostname === 'oauth2.demo.brockai.com';
+    const endpoint = isDemo ? '/admin/demo/login' : '/admin/login';
+    return api.post(endpoint, credentials);
+  },
   getMe: () => {
     const basePath = getApiBasePath();
     return api.get(`${basePath}/me`);
