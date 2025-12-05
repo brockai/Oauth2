@@ -7,7 +7,7 @@ INSERT INTO users (id, username, password_hash, is_admin, created_at, updated_at
 VALUES (
     gen_random_uuid(), 
     'demo', 
-    '$2b$10$0EHoN1QJFzTzE5.qx6k8Du8QZX1y.OKUyG.JGhDGvBfG7xTJd8JWG', 
+    '$2a$10$jynrkiR2XUn4uUFvWRPqKesaED8L2GTczd8R48RNUggmIdEEnRQJO', 
     true, 
     NOW(), 
     NOW()
