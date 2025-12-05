@@ -23,10 +23,13 @@ demoPool.on('error', (err) => {
     process.exit(-1);
 });
 
-// Function to get the appropriate pool based on DB_MODE
+// Function to get the appropriate pool based on NODE_DEMO_ENV or DB_MODE
 const getCurrentPool = () => {
+    // Check NODE_DEMO_ENV first, then fall back to DB_MODE
+    const isDemoEnv = process.env.NODE_DEMO_ENV === 'true' || process.env.NODE_DEMO_ENV === '1';
     const dbMode = process.env.DB_MODE || 'main';
-    return dbMode === 'demo' ? demoPool : mainPool;
+    
+    return isDemoEnv || dbMode === 'demo' ? demoPool : mainPool;
 };
 
 module.exports = {
