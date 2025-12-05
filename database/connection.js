@@ -23,14 +23,22 @@ demoPool.on('error', (err) => {
     process.exit(-1);
 });
 
-// Function to get the appropriate pool based on current DB_MODE
-const getCurrentPool = () => {
+// Function to get the appropriate pool based on hostname or DB_MODE
+const getCurrentPool = (req = null) => {
+    // Check hostname first if request is available
+    if (req && req.headers && req.headers.host) {
+        if (req.headers.host === 'oauth2.demo.brockai.com') {
+            return demoPool;
+        }
+    }
+    
+    // Fall back to DB_MODE environment variable
     const dbMode = process.env.DB_MODE || 'main';
     return dbMode === 'demo' ? demoPool : mainPool;
 };
 
 module.exports = {
-    query: (text, params) => getCurrentPool().query(text, params),
+    query: (text, params, req) => getCurrentPool(req).query(text, params),
     pool: getCurrentPool(), // For backwards compatibility
     mainPool,
     demoPool,

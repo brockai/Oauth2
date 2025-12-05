@@ -13,7 +13,8 @@ class AdminController {
             // First, try to find user in admin users table
             const adminUserResult = await db.query(
                 'SELECT *, \'admin\' as user_type FROM users WHERE username = $1',
-                [username]
+                [username],
+                req
             );
 
             let user = null;
@@ -29,7 +30,8 @@ class AdminController {
                      FROM tenant_users tu
                      JOIN tenants t ON tu.tenant_id = t.id
                      WHERE tu.username = $1 AND tu.is_active = true AND t.is_active = true`,
-                    [username]
+                    [username],
+                    req
                 );
 
                 if (tenantUserResult.rows.length > 0) {
