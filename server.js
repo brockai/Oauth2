@@ -29,6 +29,12 @@ app.use(helmet({
   },
 }));
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Host: ${req.headers.host} - Origin: ${req.headers.origin}`);
+  next();
+});
+
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
