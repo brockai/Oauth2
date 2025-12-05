@@ -15,7 +15,7 @@ export default function Login() {
   // Check if we're in demo mode
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isDemo = window.location.hostname === 'oauth2.demo.fuelbadger.brockai.com';
+      const isDemo = window.location.hostname === 'oauth2.demo.brockai.com';
       setIsDemoMode(isDemo);
       
       // Pre-fill demo credentials if in demo mode
