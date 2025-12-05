@@ -28,8 +28,11 @@ const getCurrentPool = () => {
     // Check NODE_DEMO_ENV first, then fall back to DB_MODE
     const isDemoEnv = process.env.NODE_DEMO_ENV === 'true' || process.env.NODE_DEMO_ENV === '1';
     const dbMode = process.env.DB_MODE || 'main';
+    const useDemo = isDemoEnv || dbMode === 'demo';
     
-    return isDemoEnv || dbMode === 'demo' ? demoPool : mainPool;
+    console.log(`DB Connection - NODE_DEMO_ENV: ${process.env.NODE_DEMO_ENV}, DB_MODE: ${process.env.DB_MODE}, Using Demo: ${useDemo}`);
+    
+    return useDemo ? demoPool : mainPool;
 };
 
 module.exports = {
