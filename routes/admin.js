@@ -62,6 +62,9 @@ const loginLimit = rateLimit({
  *                 token:
  *                   type: string
  *                   description: JWT token for authentication
+ *                 client_id:
+ *                   type: string
+ *                   description: Client ID that was used for authentication
  *                 user:
  *                   $ref: '#/components/schemas/User'
  *       401:

@@ -65,6 +65,9 @@ const db = require('../database/connection');
  *                 expires_in:
  *                   type: integer
  *                   description: Token expiration time in seconds
+ *                 client_id:
+ *                   type: string
+ *                   description: Client ID that was used for authentication
  *                 user:
  *                   type: object
  *                   properties:
@@ -168,6 +171,7 @@ router.post('/login', async (req, res) => {
             access_token: accessToken,
             token_type: 'Bearer',
             expires_in: expiresIn,
+            client_id: client_id,
             user: userInfo
         });
     } catch (error) {

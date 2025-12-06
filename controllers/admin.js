@@ -97,6 +97,7 @@ class AdminController {
 
             res.json({
                 token,
+                client_id,
                 user: userResponse
             });
 
