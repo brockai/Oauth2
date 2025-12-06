@@ -42,25 +42,48 @@ app.use(demoDetection);
 // CORS configuration
 app.use(cors({
   origin: function(origin, callback) {
+    console.log(`CORS Debug: Incoming origin: "${origin}"`);
+    console.log(`CORS Debug: NODE_ENV: "${process.env.NODE_ENV}"`);
+    
     const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? ['https://oauth2.console.brockai.com', 'https://oauth2.demo.brockai.com', 'https://web.brockai.com', 'https://oauth2.api.brockai.com', 'http://localhost:3001']
-      : ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006'];
+      ? [
+          'https://oauth2.console.brockai.com',
+          'https://oauth2.demo.brockai.com', 
+          'https://web.brockai.com', 
+          'https://oauth2.api.brockai.com',
+          'http://localhost:3001'
+        ]
+      : [
+          'http://localhost:3001', 
+          'http://localhost:3000', 
+          'http://localhost:8081', 
+          'http://localhost:19006'
+        ];
+    
+    console.log(`CORS Debug: Allowed origins:`, allowedOrigins);
     
     // Allow requests with no origin (mobile apps, postman, etc.)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
     
-    if (allowedOrigins.includes(origin)) {
-      console.log(`CORS: Allowing origin ${origin}`);
+    // Temporary: Allow all brockai.com subdomains
+    if (origin.includes('brockai.com')) {
+      console.log(`CORS: Temporarily allowing brockai.com origin: ${origin}`);
+      callback(null, true);
+    } else if (allowedOrigins.includes(origin)) {
+      console.log(`CORS: Allowing explicitly listed origin: ${origin}`);
       callback(null, true);
     } else {
-      console.log(`CORS: Blocking origin ${origin}. Allowed origins:`, allowedOrigins);
-      console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-      callback(new Error('Not allowed by CORS'));
+      console.log(`CORS: BLOCKING origin: ${origin}`);
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-CSRF-Token']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-CSRF-Token', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }));
 
 // Rate limiting
