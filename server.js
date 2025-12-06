@@ -41,9 +41,23 @@ app.use(demoDetection);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://oauth2.console.brockai.com', 'https://oauth2.demo.brockai.com', 'https://web.fuelbadger.brockai.com', 'https://oauth2.api.brockai.com', 'http://localhost:3001']
-    : ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006'],
+  origin: function(origin, callback) {
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? ['https://oauth2.console.brockai.com', 'https://oauth2.demo.brockai.com', 'https://web.brockai.com', 'https://oauth2.api.brockai.com', 'http://localhost:3001']
+      : ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006'];
+    
+    // Allow requests with no origin (mobile apps, postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      console.log(`CORS: Allowing origin ${origin}`);
+      callback(null, true);
+    } else {
+      console.log(`CORS: Blocking origin ${origin}. Allowed origins:`, allowedOrigins);
+      console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-CSRF-Token']
@@ -70,7 +84,7 @@ app.use((req, res, next) => {
   const origin = req.get('origin') || req.get('referer') || '';
   
   // Check if request comes from demo domain
-  if (origin.includes('oauth2.demo.fuelbadger.brockai.com')) {
+  if (origin.includes('oauth2.demo.brockai.com')) {
     process.env.DB_MODE = 'demo';
   } else {
     process.env.DB_MODE = 'main';
