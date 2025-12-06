@@ -39,15 +39,26 @@ app.use((req, res, next) => {
 const demoDetection = require('./middleware/demoDetection');
 app.use(demoDetection);
 
-// CORS configuration
+// CORS configuration - Temporary wildcard for debugging
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://oauth2.console.brockai.com', 'https://oauth2.demo.brockai.com', 'https://web.fuelbadger.brockai.com', 'https://oauth2.api.brockai.com', 'http://localhost:3001']
-    : ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006'],
-  credentials: true,
+  origin: '*',
+  credentials: false, // Must be false when origin is *
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-CSRF-Token']
 }));
+
+// Manual CORS headers as backup
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-CSRF-Token');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // Rate limiting
 const globalLimit = rateLimit({
