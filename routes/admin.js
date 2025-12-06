@@ -226,7 +226,7 @@ router.post('/token', verifyApiKey, adminController.generateAdminToken);
  *       404:
  *         description: Tenant or client not found
  */
-router.post('/token/custom', authenticate, adminController.generateCustomToken);
+router.post('/token/custom', authenticateToken, requireAdmin, adminController.generateCustomToken);
 
 /**
  * @swagger
