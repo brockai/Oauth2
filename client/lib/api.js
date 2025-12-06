@@ -219,6 +219,7 @@ export const apiKeysAPI = {
   generateNewKey: (data) => api.post('/admin/api-keys/generate', data),
   deleteApiKey: (id) => api.delete(`/admin/api-keys/${id}`),
   toggleApiKey: (id) => api.patch(`/admin/api-keys/${id}/toggle`),
+  generateCustomToken: (tenantId, clientId) => api.post('/admin/token/custom', { tenant_id: tenantId, client_id: clientId }),
 };
 
 export const logsAPI = {

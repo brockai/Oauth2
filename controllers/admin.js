@@ -197,6 +197,76 @@ class AdminController {
         }
     }
 
+    async generateCustomToken(req, res) {
+        try {
+            const { tenant_id, client_id } = req.body;
+
+            const adminUserResult = await db.query(
+                'SELECT * FROM users WHERE is_admin = true LIMIT 1'
+            );
+
+            if (adminUserResult.rows.length === 0) {
+                return res.status(404).json({ error: 'No admin user found' });
+            }
+
+            const adminUser = adminUserResult.rows[0];
+            
+            // Create token payload with admin user info
+            const tokenPayload = {
+                id: adminUser.id,
+                username: adminUser.username,
+                user_type: 'admin',
+                is_admin: adminUser.is_admin
+            };
+
+            // Add tenant_id if provided and validate it exists
+            if (tenant_id) {
+                const tenantResult = await db.query(
+                    'SELECT id, name FROM tenants WHERE id = $1 AND is_active = true',
+                    [tenant_id]
+                );
+                if (tenantResult.rows.length === 0) {
+                    return res.status(404).json({ error: 'Tenant not found or inactive' });
+                }
+                tokenPayload.tenant_id = tenant_id;
+                tokenPayload.tenant_name = tenantResult.rows[0].name;
+            }
+
+            // Add client_id if provided and validate it exists
+            if (client_id) {
+                const clientResult = await db.query(
+                    'SELECT client_id, name FROM oauth_clients WHERE client_id = $1 AND is_active = true',
+                    [client_id]
+                );
+                if (clientResult.rows.length === 0) {
+                    return res.status(404).json({ error: 'Client not found or inactive' });
+                }
+                tokenPayload.client_id = client_id;
+                tokenPayload.client_name = clientResult.rows[0].name;
+            }
+            
+            const token = jwt.sign(
+                tokenPayload,
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            res.json({
+                token,
+                expires_in: 86400,
+                token_type: 'Bearer',
+                tenant_id: tokenPayload.tenant_id || null,
+                client_id: tokenPayload.client_id || null,
+                username: adminUser.username,
+                user_type: 'admin'
+            });
+
+        } catch (error) {
+            console.error('Generate custom token error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+
     async updateProfile(req, res) {
         try {
             const { username, currentPassword, newPassword } = req.body;

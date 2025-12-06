@@ -172,6 +172,64 @@ router.post('/token', verifyApiKey, adminController.generateAdminToken);
 
 /**
  * @swagger
+ * /admin/token/custom:
+ *   post:
+ *     summary: Generate custom JWT token with specific tenant/client
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tenant_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional tenant ID to include in token
+ *               client_id:
+ *                 type: string
+ *                 description: Optional client ID to include in token
+ *     responses:
+ *       200:
+ *         description: Custom admin token generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT admin token
+ *                 expires_in:
+ *                   type: integer
+ *                   description: Token expiration in seconds
+ *                 token_type:
+ *                   type: string
+ *                   description: Token type
+ *                 tenant_id:
+ *                   type: string
+ *                   description: Tenant ID included in token
+ *                 client_id:
+ *                   type: string
+ *                   description: Client ID included in token
+ *                 username:
+ *                   type: string
+ *                   description: Admin username
+ *                 user_type:
+ *                   type: string
+ *                   description: User type
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Tenant or client not found
+ */
+router.post('/token/custom', authenticate, adminController.generateCustomToken);
+
+/**
+ * @swagger
  * /admin/me:
  *   get:
  *     summary: Get current user info

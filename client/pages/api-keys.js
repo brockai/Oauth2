@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
-import { apiKeysAPI } from '../lib/api';
+import { apiKeysAPI, tenantsAPI, clientsAPI } from '../lib/api';
 
 export default function ApiKeys() {
   const { user, loading } = useAuth();
@@ -14,6 +14,10 @@ export default function ApiKeys() {
   const [showNewKey, setShowNewKey] = useState(null);
   const [bearerToken, setBearerToken] = useState(null);
   const [generatingBearer, setGeneratingBearer] = useState(false);
+  const [tenants, setTenants] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [selectedTenant, setSelectedTenant] = useState('');
+  const [selectedClient, setSelectedClient] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -24,6 +28,8 @@ export default function ApiKeys() {
   useEffect(() => {
     if (user) {
       loadApiKeys();
+      loadTenants();
+      loadClients();
     }
   }, [user]);
 
@@ -35,6 +41,24 @@ export default function ApiKeys() {
       console.error('Error loading API keys:', error);
     } finally {
       setLoadingKeys(false);
+    }
+  };
+
+  const loadTenants = async () => {
+    try {
+      const response = await tenantsAPI.getTenants();
+      setTenants(response.data);
+    } catch (error) {
+      console.error('Error loading tenants:', error);
+    }
+  };
+
+  const loadClients = async () => {
+    try {
+      const response = await clientsAPI.getClients();
+      setClients(response.data);
+    } catch (error) {
+      console.error('Error loading clients:', error);
     }
   };
 
@@ -83,17 +107,51 @@ export default function ApiKeys() {
   const generateBearerToken = async () => {
     setGeneratingBearer(true);
     try {
-      // Get current user's token (which is already a Bearer token)
-      const token = localStorage.getItem('token');
-      if (token) {
-        setBearerToken(token);
-        alert('Current Bearer token retrieved! Use this in Swagger docs.');
+      // Generate custom token with selected tenant/client or use current token
+      if (selectedTenant || selectedClient) {
+        const response = await apiKeysAPI.generateCustomToken(
+          selectedTenant || null,
+          selectedClient || null
+        );
+        
+        const tokenInfo = {
+          token: response.data.token,
+          client_id: response.data.client_id || 'Not included in token',
+          tenant_id: response.data.tenant_id || 'Not included in token',
+          username: response.data.username,
+          user_type: response.data.user_type,
+          exp: new Date(Date.now() + response.data.expires_in * 1000).toLocaleString()
+        };
+        setBearerToken(tokenInfo);
+        alert('Custom Bearer token generated with specified tenant/client! Use this in Swagger docs.');
       } else {
-        alert('No Bearer token found. Please log in again.');
+        // Fall back to current token if no selections made
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const tokenInfo = {
+              token: token,
+              client_id: payload.client_id || 'Not included in token',
+              tenant_id: payload.tenant_id || 'Not included in token',
+              username: payload.username,
+              user_type: payload.user_type,
+              exp: new Date(payload.exp * 1000).toLocaleString()
+            };
+            setBearerToken(tokenInfo);
+            alert('Current Bearer token retrieved! Use this in Swagger docs.');
+          } catch (decodeError) {
+            console.error('Error decoding token:', decodeError);
+            setBearerToken({ token: token });
+            alert('Bearer token retrieved but could not decode payload.');
+          }
+        } else {
+          alert('No Bearer token found. Please log in again.');
+        }
       }
     } catch (error) {
       console.error('Error getting Bearer token:', error);
-      alert('Error getting Bearer token');
+      alert('Error getting Bearer token: ' + (error.response?.data?.error || error.message));
     } finally {
       setGeneratingBearer(false);
     }
@@ -101,7 +159,8 @@ export default function ApiKeys() {
 
   const copyBearerToken = async () => {
     if (bearerToken) {
-      await navigator.clipboard.writeText(bearerToken);
+      const tokenToCopy = typeof bearerToken === 'string' ? bearerToken : bearerToken.token;
+      await navigator.clipboard.writeText(tokenToCopy);
       alert('Bearer token copied to clipboard!');
     }
   };
@@ -135,21 +194,62 @@ export default function ApiKeys() {
             </p>
           </div>
           <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Use this token in <a href="http://localhost:3000/api-docs/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-500">Swagger docs</a> to test protected API endpoints.
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  This is your current JWT session token - different from API keys below.
-                </p>
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                Use this token in <a href="http://localhost:3000/api-docs/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-500">Swagger docs</a> to test protected API endpoints.
+              </p>
+              
+              {/* Tenant and Client Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label htmlFor="tenantSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Select Tenant (Optional)
+                  </label>
+                  <select
+                    id="tenantSelect"
+                    value={selectedTenant}
+                    onChange={(e) => setSelectedTenant(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                  >
+                    <option value="">No specific tenant</option>
+                    {tenants.map((tenant) => (
+                      <option key={tenant.id} value={tenant.id}>
+                        {tenant.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label htmlFor="clientSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Select Client (Optional)
+                  </label>
+                  <select
+                    id="clientSelect"
+                    value={selectedClient}
+                    onChange={(e) => setSelectedClient(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                  >
+                    <option value="">No specific client</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.client_id}>
+                        {client.name} ({client.client_id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Select a tenant and/or client to include their IDs in the generated token. Leave blank to use your current session token.
+              </p>
+              
               <button
                 onClick={generateBearerToken}
                 disabled={generatingBearer}
-                className="ml-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
               >
-                {generatingBearer ? 'Getting Token...' : 'Get Bearer Token'}
+                {generatingBearer ? 'Generating...' : (selectedTenant || selectedClient ? 'Generate Custom Token' : 'Get Current Token')}
               </button>
             </div>
             
@@ -166,10 +266,28 @@ export default function ApiKeys() {
                       Bearer Token Ready!
                     </h3>
                     <div className="mt-2 text-sm text-green-700 dark:text-green-300">
-                      <p className="mb-2">Copy this token and paste it into Swagger's "Authorize" dialog:</p>
-                      <div className="bg-white dark:bg-gray-800 p-3 rounded border font-mono text-xs break-all">
-                        {bearerToken}
-                      </div>
+                      {typeof bearerToken === 'object' ? (
+                        <>
+                          <div className="mb-4 space-y-2">
+                            <p><strong>Username:</strong> {bearerToken.username}</p>
+                            <p><strong>User Type:</strong> {bearerToken.user_type}</p>
+                            <p><strong>Client ID:</strong> {bearerToken.client_id}</p>
+                            <p><strong>Tenant ID:</strong> {bearerToken.tenant_id}</p>
+                            <p><strong>Expires:</strong> {bearerToken.exp}</p>
+                          </div>
+                          <p className="mb-2">Copy this token and paste it into Swagger's "Authorize" dialog:</p>
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded border font-mono text-xs break-all">
+                            {bearerToken.token}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mb-2">Copy this token and paste it into Swagger's "Authorize" dialog:</p>
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded border font-mono text-xs break-all">
+                            {bearerToken}
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div className="mt-3 flex space-x-3">
                       <button
