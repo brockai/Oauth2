@@ -4,7 +4,7 @@ const db = require('../database/connection');
 class AdminController {
     async login(req, res) {
         try {
-            const { username, password } = req.body;
+            const { username, password, client_id } = req.body;
 
             if (!username || !password) {
                 return res.status(400).json({ error: 'Username and password required' });
@@ -66,6 +66,11 @@ class AdminController {
             if (userType === 'tenant') {
                 tokenPayload.tenant_id = user.tenant_id;
                 tokenPayload.tenant_name = user.tenant_name;
+            }
+
+            // Add client_id to token payload if provided
+            if (client_id) {
+                tokenPayload.client_id = client_id;
             }
 
             const token = jwt.sign(
