@@ -194,8 +194,8 @@ cd client && npm run build && npm start
   - **Admin Login:** admin / admin123 (changeable via Profile page)
 - **Demo Console:** https://oauth2.demo.fuelbadger.brockai.com  
   - **Demo Admin Login:** demo / demo123 (for testing and demonstrations)
-- **OAuth API Server:** https://oauth2.api.fuelbadger.brockai.com
-- **API Documentation:** https://oauth2.api.fuelbadger.brockai.com/api-docs
+- **OAuth API Server:** https://oauth2.api.brockai.com
+- **API Documentation:** https://oauth2.api.brockai.com/api-docs
 
 ### Admin Interface Navigation
 

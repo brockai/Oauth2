@@ -36,7 +36,7 @@ Some endpoints (like POST /admin/token) require API key authentication via the \
     },
     servers: [
       {
-        url: 'https://oauth2.api.fuelbadger.brockai.com',
+        url: 'https://oauth2.api.brockai.com',
         description: 'Production server'
       },
       {
